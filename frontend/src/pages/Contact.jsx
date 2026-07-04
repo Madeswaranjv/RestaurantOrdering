@@ -2,16 +2,29 @@ import React, { useState } from 'react';
 import InteractiveMap from '../components/InteractiveMap';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Clock, Send, CheckCircle, Sparkles } from 'lucide-react';
+import api from '../services/api';
 
 export default function Contact() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    setForm({ name: '', email: '', subject: '', message: '' });
-    setTimeout(() => setSubmitted(false), 5000);
+    setSubmitting(true);
+    setError('');
+    try {
+      await api.post('/contact', form);
+      setSubmitted(true);
+      setForm({ name: '', email: '', subject: '', message: '' });
+      setTimeout(() => setSubmitted(false), 5000);
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Failed to send message. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -50,6 +63,18 @@ export default function Contact() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {error && (
+                  <div style={{
+                    color: 'var(--accent-primary)',
+                    fontSize: '14px',
+                    background: 'rgba(255, 45, 45, 0.08)',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 45, 45, 0.2)'
+                  }}>
+                    {error}
+                  </div>
+                )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Patron Name</label>
                   <input
@@ -95,8 +120,18 @@ export default function Contact() {
                     style={{ resize: 'none' }}
                   />
                 </div>
-                <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '10px' }}>
-                  <Send size={16} /> Send Inquiry Message
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={submitting}
+                  style={{
+                    width: '100%',
+                    marginTop: '10px',
+                    opacity: submitting ? 0.6 : 1,
+                    cursor: submitting ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <Send size={16} /> {submitting ? 'Transmitting Inquiring...' : 'Send Inquiry Message'}
                 </button>
               </form>
             )}

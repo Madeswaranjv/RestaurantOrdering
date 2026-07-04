@@ -14,6 +14,7 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import UserProfile from './pages/UserProfile';
 import DeliveryDashboard from './pages/DeliveryDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import Auth from './pages/Auth';
@@ -43,6 +44,8 @@ function MainLayout() {
         return <UserProfile />;
       case 'delivery-dashboard':
         return <DeliveryDashboard />;
+      case 'admin-dashboard':
+        return <AdminDashboard />;
       case 'about':
         return <About />;
       case 'contact':

@@ -1,18 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { motion } from 'framer-motion';
 import { Search, Star, Clock, Heart, ArrowRight } from 'lucide-react';
+import { getRestaurant } from '../services/restaurantService';
 
 export default function Restaurants() {
-  const { navigateTo, userProfile, toggleSaveRestaurant, restaurants } = useApp();
+  const { navigateTo, userProfile, toggleSaveRestaurant } = useApp();
+  const [restaurant, setRestaurant] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchSingleRest = async () => {
+      try {
+        setLoading(true);
+        const data = await getRestaurant();
+        setRestaurant(data.restaurant);
+      } catch (err) {
+        setError(err.message || 'Failed to fetch restaurant');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSingleRest();
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '20px', background: 'var(--bg-primary)' }}>
+        <div className="loader" style={{
+          width: '50px',
+          height: '50px',
+          borderRadius: '50%',
+          border: '3px solid rgba(255, 45, 45, 0.1)',
+          borderTopColor: 'var(--accent-primary)',
+          animation: 'spin 1s linear infinite'
+        }} />
+        <p style={{ color: 'var(--text-muted)', fontSize: '16px', letterSpacing: '0.05em' }}>Loading FlavorDash kitchens...</p>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '20px', background: 'var(--bg-primary)', padding: '20px' }}>
+        <div style={{ color: 'var(--accent-primary)', fontSize: '48px' }}>⚠️</div>
+        <h3 style={{ color: 'var(--text-primary)', fontSize: '20px' }}>Failed to Load Kitchens</h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px', maxWidth: '400px', textAlign: 'center' }}>{error}</p>
+        <button onClick={() => window.location.reload()} className="btn-primary" style={{ padding: '10px 24px' }}>Retry</button>
+      </div>
+    );
+  }
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCuisine, setSelectedCuisine] = useState('All');
 
-  // Gather unique cuisines from mock database
-  const allCuisines = ['All', ...new Set(restaurants.flatMap(r => r.cuisine))];
+  const restaurantsArray = restaurant ? [{
+    id: restaurant._id,
+    name: restaurant.name,
+    cuisine: restaurant.cuisines || [],
+    rating: restaurant.rating || 5.0,
+    reviewsCount: restaurant.reviews?.length || 0,
+    deliveryTime: "25-35",
+    priceRange: "$$$",
+    coverImage: restaurant.coverImage,
+    logoImage: restaurant.gallery && restaurant.gallery.length > 0 ? restaurant.gallery[0] : "",
+    description: restaurant.description,
+    featured: true,
+    location: restaurant.address,
+    gallery: restaurant.gallery || []
+  }] : [];
+
+  // Gather unique cuisines from database
+  const allCuisines = ['All', ...new Set(restaurantsArray.flatMap(r => r.cuisine))];
 
   // Filtering logic
-  const filteredRestaurants = restaurants.filter(r => {
+  const filteredRestaurants = restaurantsArray.filter(r => {
     const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           r.cuisine.some(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCuisine = selectedCuisine === 'All' || r.cuisine.includes(selectedCuisine);

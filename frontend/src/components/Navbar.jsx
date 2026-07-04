@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Search, ShoppingBag, User, Menu, X } from 'lucide-react';
 
 export default function Navbar() {
-  const { currentPage, navigateTo, cartItems } = useApp();
+  const { currentPage, navigateTo, cartItems, user } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,6 +22,12 @@ export default function Navbar() {
     { id: 'about', label: 'About' },
     { id: 'contact', label: 'Contact' }
   ];
+
+  if (user && user.role === 'admin') {
+    navLinks.push({ id: 'admin-dashboard', label: 'Admin Panel' });
+  } else if (user && user.role === 'deliveryPartner') {
+    navLinks.push({ id: 'delivery-dashboard', label: 'Driver Panel' });
+  }
 
   return (
     <>

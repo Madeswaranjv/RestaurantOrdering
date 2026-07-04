@@ -1,22 +1,119 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { motion } from 'framer-motion';
-import { User, Clock, Heart, MapPin, CreditCard, Settings, Edit3, CheckCircle, Package } from 'lucide-react';
+import { User, Clock, Heart, MapPin, CreditCard, Settings, Edit3, CheckCircle, Package, Trash2, KeyRound, Plus } from 'lucide-react';
 
 export default function UserProfile() {
-  const { userProfile, updateProfile, toggleSaveRestaurant, navigateTo, restaurants, logout } = useApp();
+  const { 
+    user,
+    userProfile, 
+    updateProfile, 
+    updatePassword,
+    addAddress,
+    updateAddress,
+    deleteAddress,
+    toggleSaveRestaurant, 
+    navigateTo, 
+    restaurants, 
+    logout 
+  } = useApp();
+
   const [activeTab, setActiveTab] = useState('overview'); // overview, history, saved, settings
   const [isEditing, setIsEditing] = useState(false);
 
-  // Form states
-  const [name, setName] = useState(userProfile.name);
-  const [email, setEmail] = useState(userProfile.email);
-  const [phone, setPhone] = useState(userProfile.phone);
+  // Profile Form states
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+
+  // Address form states
+  const [addressFormOpen, setAddressFormOpen] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState(null);
+  const [addressLabel, setAddressLabel] = useState('');
+  const [addressValue, setAddressValue] = useState('');
+  const [addressDefault, setAddressDefault] = useState(false);
+  const [addrError, setAddrError] = useState('');
+
+  // Password form states
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passError, setPassError] = useState('');
+  const [passSuccess, setPassSuccess] = useState('');
+  const [passLoading, setPassLoading] = useState(false);
+
+  // Sync profile form when userProfile changes
+  useEffect(() => {
+    setName(userProfile.name);
+    setEmail(userProfile.email);
+    setPhone(userProfile.phone);
+  }, [userProfile]);
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     await updateProfile({ name, email, phone });
     setIsEditing(false);
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPassError('');
+    setPassSuccess('');
+    setPassLoading(true);
+    try {
+      await updatePassword(oldPassword, newPassword);
+      setPassSuccess('Password updated successfully.');
+      setOldPassword('');
+      setNewPassword('');
+    } catch (err) {
+      setPassError(err.response?.data?.message || 'Password update failed.');
+    } finally {
+      setPassLoading(false);
+    }
+  };
+
+  const handleSaveAddress = async (e) => {
+    e.preventDefault();
+    setAddrError('');
+    try {
+      if (editingAddressId) {
+        await updateAddress(editingAddressId, {
+          label: addressLabel,
+          address: addressValue,
+          isDefault: addressDefault
+        });
+      } else {
+        await addAddress({
+          label: addressLabel,
+          address: addressValue,
+          isDefault: addressDefault
+        });
+      }
+      setAddressFormOpen(false);
+      setEditingAddressId(null);
+      setAddressLabel('');
+      setAddressValue('');
+      setAddressDefault(false);
+    } catch (err) {
+      setAddrError(err.response?.data?.message || 'Address save failed.');
+    }
+  };
+
+  const handleEditAddressClick = (addr) => {
+    setEditingAddressId(addr.id);
+    setAddressLabel(addr.label);
+    setAddressValue(addr.address);
+    setAddressDefault(addr.isDefault);
+    setAddressFormOpen(true);
+  };
+
+  const handleDeleteAddressClick = async (id) => {
+    if (window.confirm('Delete this address?')) {
+      try {
+        await deleteAddress(id);
+      } catch (err) {
+        alert('Failed to delete address.');
+      }
+    }
   };
 
   const tabs = [
@@ -211,10 +308,6 @@ export default function UserProfile() {
                               );
                             })}
                           </div>
-                          
-                          <button onClick={() => navigateTo('checkout')} className="btn-secondary" style={{ width: 'fit-content', marginTop: '10px' }}>
-                            View GPS Tracking Map
-                          </button>
                         </div>
                       );
                     })()
@@ -317,66 +410,236 @@ export default function UserProfile() {
 
             {/* 4. SETTINGS VIEW */}
             {activeTab === 'settings' && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card" style={{ padding: '30px' }}>
-                <h3 style={{ fontSize: '22px', borderBottom: '1px solid var(--border-color)', paddingBottom: '20px', marginBottom: '24px' }}>
-                  Update Settings
-                </h3>
-                {isEditing ? (
-                  <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Full Name</label>
-                      <input 
-                        type="text" 
-                        required 
-                        className="glass-input" 
-                        value={name} 
-                        onChange={(e) => setName(e.target.value)}
-                      />
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                
+                {/* Profile Information Settings */}
+                <div className="glass-card" style={{ padding: '30px' }}>
+                  <h3 style={{ fontSize: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px' }}>
+                    Profile Details
+                  </h3>
+                  {isEditing ? (
+                    <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Full Name</label>
+                        <input 
+                          type="text" 
+                          required 
+                          className="glass-input" 
+                          value={name} 
+                          onChange={(e) => setName(e.target.value)}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Email Address</label>
+                        <input 
+                          type="email" 
+                          required 
+                          className="glass-input" 
+                          value={email} 
+                          disabled
+                          style={{ opacity: 0.6, cursor: 'not-allowed' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Phone Number</label>
+                        <input 
+                          type="text" 
+                          required 
+                          className="glass-input" 
+                          value={phone} 
+                          onChange={(e) => setPhone(e.target.value)}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: '16px', marginTop: '10px' }}>
+                        <button type="submit" className="btn-primary">Save Changes</button>
+                        <button type="button" onClick={() => setIsEditing(false)} className="btn-secondary">Cancel</button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div>
+                        <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block' }}>FULL NAME</span>
+                        <span style={{ fontSize: '18px', fontWeight: 600, display: 'block', marginTop: '4px' }}>{userProfile.name}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block' }}>EMAIL ADDRESS</span>
+                        <span style={{ fontSize: '18px', fontWeight: 600, display: 'block', marginTop: '4px' }}>{userProfile.email}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block' }}>PHONE NUMBER</span>
+                        <span style={{ fontSize: '18px', fontWeight: 600, display: 'block', marginTop: '4px' }}>{userProfile.phone || 'Not provided'}</span>
+                      </div>
+                      <button onClick={() => setIsEditing(true)} className="btn-primary" style={{ width: 'fit-content', marginTop: '10px' }}>
+                        <Edit3 size={16} /> Edit Profile Info
+                      </button>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Email Address</label>
-                      <input 
-                        type="email" 
-                        required 
-                        className="glass-input" 
-                        value={email} 
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Phone Number</label>
-                      <input 
-                        type="text" 
-                        required 
-                        className="glass-input" 
-                        value={phone} 
-                        onChange={(e) => setPhone(e.target.value)}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', gap: '16px', marginTop: '10px' }}>
-                      <button type="submit" className="btn-primary">Save Changes</button>
-                      <button type="button" onClick={() => setIsEditing(false)} className="btn-secondary">Cancel</button>
-                    </div>
-                  </form>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                    <div>
-                      <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block' }}>FULL NAME</span>
-                      <span style={{ fontSize: '18px', fontWeight: 600, display: 'block', marginTop: '4px' }}>{userProfile.name}</span>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block' }}>EMAIL ADDRESS</span>
-                      <span style={{ fontSize: '18px', fontWeight: 600, display: 'block', marginTop: '4px' }}>{userProfile.email}</span>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block' }}>PHONE NUMBER</span>
-                      <span style={{ fontSize: '18px', fontWeight: 600, display: 'block', marginTop: '4px' }}>{userProfile.phone}</span>
-                    </div>
-                    <button onClick={() => setIsEditing(true)} className="btn-primary" style={{ width: 'fit-content', marginTop: '10px' }}>
-                      <Edit3 size={16} /> Edit Profile Info
-                    </button>
+                  )}
+                </div>
+
+                {/* Address Management Settings */}
+                <div className="glass-card" style={{ padding: '30px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px' }}>
+                    <h3 style={{ fontSize: '20px', margin: 0 }}>Registered Addresses</h3>
+                    {!addressFormOpen && (
+                      <button 
+                        onClick={() => {
+                          setEditingAddressId(null);
+                          setAddressLabel('');
+                          setAddressValue('');
+                          setAddressDefault(false);
+                          setAddressFormOpen(true);
+                          setAddrError('');
+                        }}
+                        className="btn-primary" 
+                        style={{ padding: '8px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <Plus size={14} /> Add Address
+                      </button>
+                    )}
                   </div>
-                )}
+
+                  {addrError && (
+                    <div style={{ padding: '12px', background: 'rgba(255, 45, 45, 0.1)', border: '1px solid var(--accent-secondary)', color: 'var(--accent-secondary)', borderRadius: '8px', fontSize: '14px', marginBottom: '20px' }}>
+                      {addrError}
+                    </div>
+                  )}
+
+                  {addressFormOpen && (
+                    <form onSubmit={handleSaveAddress} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '30px', padding: '20px', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
+                      <h4 style={{ fontSize: '16px', fontWeight: 600 }}>{editingAddressId ? 'Edit Address' : 'New Address'}</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Label (e.g. Home, Office)</label>
+                        <input 
+                          type="text" 
+                          required 
+                          placeholder="Home" 
+                          className="glass-input" 
+                          value={addressLabel} 
+                          onChange={(e) => setAddressLabel(e.target.value)}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Full Address Description</label>
+                        <input 
+                          type="text" 
+                          required 
+                          placeholder="123 Luxury Ave, London" 
+                          className="glass-input" 
+                          value={addressValue} 
+                          onChange={(e) => setAddressValue(e.target.value)}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input 
+                          type="checkbox" 
+                          id="default-address"
+                          checked={addressDefault} 
+                          onChange={(e) => setAddressDefault(e.target.checked)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <label htmlFor="default-address" style={{ fontSize: '14px', color: 'var(--text-muted)', cursor: 'pointer' }}>Set as default address</label>
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                        <button type="submit" className="btn-primary" style={{ padding: '10px 20px', fontSize: '14px' }}>Save Address</button>
+                        <button type="button" onClick={() => setAddressFormOpen(false)} className="btn-secondary" style={{ padding: '10px 20px', fontSize: '14px' }}>Cancel</button>
+                      </div>
+                    </form>
+                  )}
+
+                  {userProfile.addresses.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {userProfile.addresses.map((addr) => (
+                        <div key={addr.id} style={{
+                          padding: '20px',
+                          background: 'rgba(255,255,255,0.02)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '12px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '20px'
+                        }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span style={{ fontWeight: 600, fontSize: '16px' }}>{addr.label}</span>
+                              {addr.isDefault && (
+                                <span style={{ fontSize: '11px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '2px 8px', borderRadius: '20px', fontWeight: 600 }}>
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px', display: 'block' }}>{addr.address}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            <button 
+                              onClick={() => handleEditAddressClick(addr)}
+                              className="btn-secondary"
+                              style={{ padding: '8px 12px', fontSize: '12px' }}
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteAddressClick(addr.id)}
+                              className="btn-secondary"
+                              style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--accent-primary)' }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ color: 'var(--text-muted)' }}>No registered addresses. Add one to enable checkout deliveries.</p>
+                  )}
+                </div>
+
+                {/* Password Modification Settings */}
+                <div className="glass-card" style={{ padding: '30px' }}>
+                  <h3 style={{ fontSize: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px' }}>
+                    Security Credentials
+                  </h3>
+
+                  {passError && (
+                    <div style={{ padding: '12px', background: 'rgba(255, 45, 45, 0.1)', border: '1px solid var(--accent-secondary)', color: 'var(--accent-secondary)', borderRadius: '8px', fontSize: '14px', marginBottom: '20px' }}>
+                      {passError}
+                    </div>
+                  )}
+                  {passSuccess && (
+                    <div style={{ padding: '12px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10B981', borderRadius: '8px', fontSize: '14px', marginBottom: '20px' }}>
+                      {passSuccess}
+                    </div>
+                  )}
+
+                  <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Current Password</label>
+                      <input 
+                        type="password" 
+                        required 
+                        placeholder="••••••••"
+                        className="glass-input" 
+                        value={oldPassword} 
+                        onChange={(e) => setOldPassword(e.target.value)}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '14px', color: 'var(--text-muted)' }}>New Secure Password</label>
+                      <input 
+                        type="password" 
+                        required 
+                        placeholder="••••••••"
+                        className="glass-input" 
+                        value={newPassword} 
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
+                    </div>
+                    <button type="submit" disabled={passLoading} className="btn-primary" style={{ width: 'fit-content', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <KeyRound size={16} /> {passLoading ? 'Updating credentials...' : 'Update Password'}
+                    </button>
+                  </form>
+                </div>
+
               </motion.div>
             )}
 

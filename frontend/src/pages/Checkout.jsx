@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import InteractiveMap from '../components/InteractiveMap';
 import { motion } from 'framer-motion';
@@ -13,7 +13,8 @@ export default function Checkout() {
     taxes,
     userProfile, 
     placeOrder, 
-    navigateTo 
+    navigateTo,
+    socket
   } = useApp();
 
   const [step, setStep] = useState(1);
@@ -21,14 +22,58 @@ export default function Checkout() {
   const [selectedCardId, setSelectedCardId] = useState(userProfile.savedCards[0]?.id || '');
   const [confirmedOrderId, setConfirmedOrderId] = useState('');
 
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [orderError, setOrderError] = useState('');
+  const [driverCoords, setDriverCoords] = useState(null);
+
   const activeAddress = userProfile.addresses.find(a => a.id === selectedAddressId) || userProfile.addresses[0];
   const activeCard = userProfile.savedCards.find(c => c.id === selectedCardId) || userProfile.savedCards[0];
 
+  useEffect(() => {
+    if (confirmedOrderId && socket) {
+      socket.emit('joinOrder', confirmedOrderId);
+      console.log(`Joined Socket.IO room for order: ${confirmedOrderId}`);
+
+      const handleDriverLoc = ({ orderId, coords }) => {
+        if (orderId === confirmedOrderId) {
+          console.log(`Received driver location update:`, coords);
+          setDriverCoords(coords);
+        }
+      };
+
+      const handleStatusChange = ({ orderId, status }) => {
+        if (orderId === confirmedOrderId) {
+          console.log(`Received order status change: ${status}`);
+        }
+      };
+
+      socket.on('driverLocationChanged', handleDriverLoc);
+      socket.on('orderStatusChanged', handleStatusChange);
+
+      return () => {
+        socket.off('driverLocationChanged', handleDriverLoc);
+        socket.off('orderStatusChanged', handleStatusChange);
+        socket.emit('leaveOrder', confirmedOrderId);
+        console.log(`Left Socket.IO room for order: ${confirmedOrderId}`);
+      };
+    }
+  }, [confirmedOrderId, socket]);
+
   const handlePlaceOrder = async () => {
-    const orderId = await placeOrder(activeAddress, activeCard);
-    if (orderId) {
-      setConfirmedOrderId(orderId);
-      setStep(4);
+    try {
+      setPlacingOrder(true);
+      setOrderError('');
+      const orderId = await placeOrder(activeAddress, activeCard);
+      if (orderId) {
+        setConfirmedOrderId(orderId);
+        setStep(4);
+      } else {
+        setOrderError('Failed to place order. Please review your address and payment details.');
+      }
+    } catch (err) {
+      setOrderError(err.message || 'An error occurred while placing your order.');
+    } finally {
+      setPlacingOrder(false);
     }
   };
 
@@ -277,8 +322,29 @@ export default function Checkout() {
                     <span>Total Due</span>
                     <span>${cartTotal.toFixed(2)}</span>
                   </div>
-                  <button onClick={handlePlaceOrder} className="btn-primary" style={{ width: '100%', marginTop: '10px' }}>
-                    Place Order & Pay
+                  {orderError && (
+                    <div style={{
+                      padding: '12px',
+                      background: 'rgba(255, 45, 45, 0.08)',
+                      border: '1px solid rgba(255, 45, 45, 0.2)',
+                      color: 'var(--accent-secondary)',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <AlertCircle size={16} />
+                      <span>{orderError}</span>
+                    </div>
+                  )}
+                  <button 
+                    onClick={handlePlaceOrder} 
+                    disabled={placingOrder}
+                    className="btn-primary" 
+                    style={{ width: '100%', marginTop: '10px' }}
+                  >
+                    {placingOrder ? 'Placing Order...' : 'Place Order & Pay'}
                   </button>
                   <button onClick={() => setStep(2)} className="btn-secondary" style={{ width: '100%' }}>
                     Back
@@ -310,11 +376,12 @@ export default function Checkout() {
                   <InteractiveMap 
                     pins={[
                       { label: "Michelin Kitchen", x: 25, y: 70, type: 'restaurant' },
-                      { label: activeAddress.label, x: 75, y: 30, type: 'delivery' }
+                      { label: activeAddress.label, x: 75, y: 30, type: 'delivery' },
+                      ...(driverCoords ? [{ label: "Courier Partner", x: driverCoords.x, y: driverCoords.y, type: 'driver' }] : [])
                     ]}
                     routeStart={{ x: 25, y: 70 }}
                     routeEnd={{ x: 75, y: 30 }}
-                    liveTracking={true}
+                    liveTracking={!driverCoords}
                     height="320px"
                   />
                   

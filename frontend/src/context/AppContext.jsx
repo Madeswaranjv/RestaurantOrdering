@@ -1,5 +1,13 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../services/api';
+import * as authService from '../services/authService';
+import * as menuService from '../services/menuService';
+import * as restaurantService from '../services/restaurantService';
+import * as cartService from '../services/cartService';
+import * as orderService from '../services/orderService';
+import * as userService from '../services/userService';
+import * as deliveryService from '../services/deliveryService';
+import * as aiService from '../services/aiService';
 import { io } from 'socket.io-client';
 
 const AppContext = createContext();
@@ -25,7 +33,14 @@ export const AppProvider = ({ children }) => {
   // Cart State
   const [cartItems, setCartItems] = useState([]);
 
-  // User Profile & Order History State (initialized with default structure to prevent UI crashes)
+  // Initial Fetch States
+  const [initialLoading, setInitialLoading] = useState(false);
+  const [initialError, setInitialError] = useState('');
+
+  // Live Tracking Coordinate State
+  const [liveOrderCoordinates, setLiveOrderCoordinates] = useState({});
+
+  // User Profile & Order History State
   const [userProfile, setUserProfile] = useState({
     name: "",
     email: "",
@@ -46,7 +61,7 @@ export const AppProvider = ({ children }) => {
   const [dishes, setDishes] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  // AI Meal Planner Preferences and Generated Plan State
+  // AI Meal Planner State
   const [mealPlannerInput, setMealPlannerInput] = useState({
     age: 28,
     weight: 65,
@@ -56,7 +71,7 @@ export const AppProvider = ({ children }) => {
 
   const [mealPlan, setMealPlan] = useState(null);
 
-  // Delivery Driver State (Uber Driver Redesign)
+  // Delivery Driver State
   const [driverState, setDriverState] = useState({
     driverName: "",
     weeklyEarnings: 0,
@@ -101,12 +116,12 @@ export const AppProvider = ({ children }) => {
       phone: userObj.phone || "",
       avatar: userObj.avatar || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150",
       addresses: userObj.addresses ? userObj.addresses.map(addr => ({
-        id: addr._id,
+        id: addr._id || addr.id,
         label: addr.label,
         address: addr.address,
         isDefault: addr.isDefault
       })) : [],
-      activeAddressId: userObj.addresses?.find(a => a.isDefault)?._id || (userObj.addresses?.[0]?._id || ""),
+      activeAddressId: userObj.addresses?.find(a => a.isDefault)?._id || userObj.addresses?.find(a => a.isDefault)?.id || (userObj.addresses?.[0]?._id || userObj.addresses?.[0]?.id || ""),
       savedRestaurants: userObj.savedRestaurants || [],
       orderHistory: orders.map(o => ({
         id: o._id,
@@ -129,8 +144,8 @@ export const AppProvider = ({ children }) => {
 
   const fetchCart = async () => {
     try {
-      const res = await api.get('/cart');
-      const cartData = res.data.data.cart;
+      const data = await cartService.getCart();
+      const cartData = data.cart;
       if (cartData) {
         setCartItems(mapBackendCartToFrontend(cartData));
       }
@@ -141,8 +156,8 @@ export const AppProvider = ({ children }) => {
 
   const fetchOrders = async (userObj) => {
     try {
-      const res = await api.get('/orders');
-      const orders = res.data.data.orders || [];
+      const data = await orderService.getOrders();
+      const orders = data.orders || [];
       updateUserProfileFromUserObj(userObj, orders);
     } catch (err) {
       console.error("Error fetching orders", err);
@@ -151,17 +166,14 @@ export const AppProvider = ({ children }) => {
 
   const fetchDriverDashboard = async () => {
     try {
-      const dashRes = await api.get('/delivery/dashboard');
-      const stats = dashRes.data.data;
+      const stats = await deliveryService.getDashboard();
+      const activeData = await deliveryService.getActiveOrders();
+      const activeOrders = activeData.orders || [];
 
-      const activeRes = await api.get('/delivery/active');
-      const activeOrders = activeRes.data.data.orders || [];
+      const availableData = await deliveryService.getAvailableOrders();
+      const availableOrders = availableData.orders || [];
 
-      const availableRes = await api.get('/delivery/orders');
-      const availableOrders = availableRes.data.data.orders || [];
-
-      const earningsRes = await api.get('/delivery/earnings');
-      const earningsData = earningsRes.data.data || { totalEarnings: 0, history: [] };
+      const earningsData = await deliveryService.getEarnings() || { totalEarnings: 0, history: [] };
 
       // Map earnings to daily chart format (Mon-Sun)
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -227,21 +239,23 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // Initial Data Fetching (Menu and Restaurants)
+  // Initial Data Fetching (Menu, Categories, Restaurants)
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [resRes, menuRes, catRes] = await Promise.all([
-          api.get('/restaurant'),
-          api.get('/menu?limit=100'),
-          api.get('/categories')
+        setInitialLoading(true);
+        setInitialError('');
+        const [resData, menuData, catData] = await Promise.all([
+          restaurantService.getRestaurant(),
+          menuService.getMenuItems({ limit: 100 }),
+          menuService.getCategories()
         ]);
 
-        const restObj = resRes.data.data.restaurant;
+        const restObj = resData.restaurant;
         const fetchedRestaurants = restObj ? [{
           id: restObj._id,
           name: restObj.name,
-          cuisine: restObj.cuisines,
+          cuisine: restObj.cuisines || [],
           rating: restObj.rating,
           reviewsCount: restObj.reviews?.length || 0,
           deliveryTime: "25-35",
@@ -255,7 +269,7 @@ export const AppProvider = ({ children }) => {
         }] : [];
         setRestaurants(fetchedRestaurants);
 
-        const fetchedDishes = menuRes.data.data.menuItems.map(d => ({
+        const fetchedDishes = menuData.menuItems.map(d => ({
           id: d._id,
           restaurantId: fetchedRestaurants.length > 0 ? fetchedRestaurants[0].id : null,
           name: d.name,
@@ -270,7 +284,7 @@ export const AppProvider = ({ children }) => {
         }));
         setDishes(fetchedDishes);
 
-        const fetchedCategories = catRes.data.data.map(c => ({
+        const fetchedCategories = catData.map(c => ({
           id: c._id,
           name: c.name,
           description: c.description,
@@ -279,19 +293,33 @@ export const AppProvider = ({ children }) => {
         setCategories(fetchedCategories);
       } catch (error) {
         console.error("Error fetching initial data", error);
+        setInitialError(error.message || 'Failed to load initial data');
+      } finally {
+        setInitialLoading(false);
       }
     };
     fetchInitialData();
   }, []);
 
-  // Auto Login Effect
+  // Parse Google OAuth redirect params and Auto Login Effect
   useEffect(() => {
     const autoLogin = async () => {
+      // Check window URL for OAuth success parameters
+      if (window.location.pathname.includes('/oauth-success') || window.location.search.includes('token=')) {
+        const params = new URLSearchParams(window.location.search);
+        const oauthToken = params.get('token');
+        if (oauthToken) {
+          localStorage.setItem('token', oauthToken);
+          setToken(oauthToken);
+        }
+        window.history.replaceState({}, document.title, '/');
+      }
+
       const storedToken = localStorage.getItem('token');
       if (storedToken) {
         try {
-          const res = await api.get('/auth/me');
-          const userObj = res.data.data.user;
+          const data = await authService.getMe();
+          const userObj = data.user;
           setUser(userObj);
 
           if (userObj.role === 'deliveryPartner') {
@@ -309,6 +337,20 @@ export const AppProvider = ({ children }) => {
     };
     autoLogin();
   }, [token]);
+
+  // Intercept 401 Unauthorized globally from api.js response
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setToken(null);
+      setUser(null);
+      setCartItems([]);
+      navigateTo('auth');
+    };
+    window.addEventListener('auth-unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('auth-unauthorized', handleUnauthorized);
+    };
+  }, []);
 
   // Socket.IO Effect
   useEffect(() => {
@@ -348,6 +390,14 @@ export const AppProvider = ({ children }) => {
         }
       });
 
+      socketConn.on('driverLocationChanged', ({ orderId, coords }) => {
+        console.log(`Socket update: Live location for order ${orderId} changed to:`, coords);
+        setLiveOrderCoordinates(prev => ({
+          ...prev,
+          [orderId]: coords
+        }));
+      });
+
       setSocket(socketConn);
 
       return () => {
@@ -361,12 +411,50 @@ export const AppProvider = ({ children }) => {
     }
   }, [user]);
 
+  // Driver Location Simulation Effect
+  useEffect(() => {
+    if (user && user.role === 'deliveryPartner' && socket) {
+      const activeJobs = driverState.liveDeliveries.filter(d => d.status === 'On the Way');
+      if (activeJobs.length === 0) return;
+
+      console.log(`Driver has active 'On the Way' jobs. Starting simulated location updates...`);
+      let step = 0;
+      const interval = setInterval(() => {
+        step += 0.05;
+        if (step > 1) step = 0; // reset
+        activeJobs.forEach(job => {
+          const targetX = 75; // customer coordinates
+          const targetY = 30;
+          const x = Number((25 + (targetX - 25) * step).toFixed(2));
+          const y = Number((70 + (targetY - 70) * step).toFixed(2));
+          socket.emit('driverLocationUpdate', {
+            orderId: job.id,
+            coords: { x, y }
+          });
+        });
+      }, 3000);
+
+      return () => clearInterval(interval);
+    }
+  }, [user, socket, driverState.liveDeliveries]);
+
+  // Join Order Socket Room
+  const joinOrderRoom = (orderId) => {
+    if (socket) {
+      socket.emit('joinOrder', orderId);
+      console.log(`Joined Socket.IO room for order: ${orderId}`);
+    }
+  };
+
   // Navigation Helper
   const navigateTo = (page, params = {}) => {
-    // Basic route protection
-    const protectedPages = ['profile', 'cart', 'checkout', 'delivery-dashboard'];
-    if (protectedPages.includes(page) && !user) {
+    const protectedPages = ['profile', 'cart', 'checkout', 'delivery-dashboard', 'admin-dashboard'];
+    if (protectedPages.includes(page) && !localStorage.getItem('token')) {
       setCurrentPage('auth');
+    } else if (page === 'admin-dashboard' && user && user.role !== 'admin') {
+      setCurrentPage('home');
+    } else if (page === 'delivery-dashboard' && user && user.role !== 'deliveryPartner') {
+      setCurrentPage('home');
     } else {
       setCurrentPage(page);
       if (params.restaurantId) setActiveRestaurantId(params.restaurantId);
@@ -377,8 +465,8 @@ export const AppProvider = ({ children }) => {
 
   // Auth Operations
   const login = async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
-    const { accessToken, user: userObj } = res.data.data;
+    const data = await authService.login(email, password);
+    const { accessToken, user: userObj } = data;
     localStorage.setItem('token', accessToken);
     setToken(accessToken);
     setUser(userObj);
@@ -386,6 +474,8 @@ export const AppProvider = ({ children }) => {
     if (userObj.role === 'deliveryPartner') {
       navigateTo('delivery-dashboard');
       await fetchDriverDashboard();
+    } else if (userObj.role === 'admin') {
+      navigateTo('admin-dashboard');
     } else {
       navigateTo('home');
       await fetchCart();
@@ -402,8 +492,7 @@ export const AppProvider = ({ children }) => {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
       try {
-        // Fetch fresh details before logging out just to clean up tokens on backend
-        await api.post('/auth/logout', { refreshToken: storedToken }).catch(() => {});
+        await authService.logout(storedToken).catch(() => {});
       } catch (err) {}
       localStorage.removeItem('token');
     }
@@ -415,53 +504,46 @@ export const AppProvider = ({ children }) => {
 
   // Cart Operations
   const addToCart = async (dish, customization = {}, quantity = 1) => {
-    if (!user) {
+    if (!localStorage.getItem('token')) {
       navigateTo('auth');
       return;
     }
     try {
-      const res = await api.post('/cart/add', {
-        menuItemId: dish.id || dish._id,
-        quantity,
-        customization
-      });
-      setCartItems(mapBackendCartToFrontend(res.data.data.cart));
+      const data = await cartService.addToCart(dish.id || dish._id, quantity, customization);
+      setCartItems(mapBackendCartToFrontend(data.cart));
     } catch (err) {
       console.error("Error adding to cart", err);
     }
   };
 
   const removeFromCart = async (cartItemId) => {
-    if (!user) return;
+    if (!localStorage.getItem('token')) return;
     try {
-      const res = await api.delete(`/cart/remove/${cartItemId}`);
-      setCartItems(mapBackendCartToFrontend(res.data.data.cart));
+      const data = await cartService.removeCartItem(cartItemId);
+      setCartItems(mapBackendCartToFrontend(data.cart));
     } catch (err) {
       console.error("Error removing from cart", err);
     }
   };
 
   const updateQuantity = async (cartItemId, newQty) => {
-    if (!user) return;
+    if (!localStorage.getItem('token')) return;
     if (newQty <= 0) {
       await removeFromCart(cartItemId);
       return;
     }
     try {
-      const res = await api.put('/cart/update', {
-        menuItemId: cartItemId,
-        quantity: newQty
-      });
-      setCartItems(mapBackendCartToFrontend(res.data.data.cart));
+      const data = await cartService.updateCartItem(cartItemId, newQty);
+      setCartItems(mapBackendCartToFrontend(data.cart));
     } catch (err) {
       console.error("Error updating quantity", err);
     }
   };
 
   const clearCart = async () => {
-    if (!user) return;
+    if (!localStorage.getItem('token')) return;
     try {
-      const res = await api.delete('/cart/clear');
+      await cartService.clearCart();
       setCartItems([]);
     } catch (err) {
       console.error("Error clearing cart", err);
@@ -473,15 +555,16 @@ export const AppProvider = ({ children }) => {
   const taxes = Number((cartSubtotal * 0.1).toFixed(2));
   const cartTotal = Number((cartSubtotal + deliveryFee + taxes).toFixed(2));
 
-  // Profile Customizations
+  // Profile Address & Password modifications
   const toggleSaveRestaurant = async (restaurantId) => {
-    if (!user) {
+    if (!localStorage.getItem('token')) {
       navigateTo('auth');
       return;
     }
     try {
-      const res = await api.put(`/users/save-restaurant/${restaurantId}`);
-      const saved = res.data.data.savedRestaurants;
+      const data = await userService.toggleSaveRestaurant(restaurantId);
+      const saved = data.savedRestaurants;
+      setUser(prev => ({ ...prev, savedRestaurants: saved }));
       setUserProfile(prev => ({ ...prev, savedRestaurants: saved }));
     } catch (err) {
       console.error("Error toggling saved restaurant", err);
@@ -491,12 +574,12 @@ export const AppProvider = ({ children }) => {
   const updateProfile = async (newProfileInfo) => {
     if (!user) return;
     try {
-      const res = await api.put('/users/profile', {
+      const data = await userService.updateProfile({
         name: newProfileInfo.name,
         phone: newProfileInfo.phone,
         avatar: user.avatar
       });
-      const updatedUser = res.data.data.user;
+      const updatedUser = data.user;
       setUser(updatedUser);
       await fetchOrders(updatedUser);
     } catch (err) {
@@ -504,15 +587,67 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const updatePassword = async (oldPassword, newPassword) => {
+    try {
+      await userService.changePassword(oldPassword, newPassword);
+      return true;
+    } catch (err) {
+      console.error("Error changing password", err);
+      throw err;
+    }
+  };
+
+  const handleAddAddress = async (addressData) => {
+    try {
+      const data = await userService.addAddress(addressData);
+      setUser(prev => {
+        const updated = { ...prev, addresses: data.addresses };
+        updateUserProfileFromUserObj(updated, userProfile.orderHistory || []);
+        return updated;
+      });
+    } catch (err) {
+      console.error("Error adding address", err);
+      throw err;
+    }
+  };
+
+  const handleUpdateAddress = async (id, addressData) => {
+    try {
+      const data = await userService.updateAddress(id, addressData);
+      setUser(prev => {
+        const updated = { ...prev, addresses: data.addresses };
+        updateUserProfileFromUserObj(updated, userProfile.orderHistory || []);
+        return updated;
+      });
+    } catch (err) {
+      console.error("Error updating address", err);
+      throw err;
+    }
+  };
+
+  const handleDeleteAddress = async (id) => {
+    try {
+      const data = await userService.deleteAddress(id);
+      setUser(prev => {
+        const updated = { ...prev, addresses: data.addresses };
+        updateUserProfileFromUserObj(updated, userProfile.orderHistory || []);
+        return updated;
+      });
+    } catch (err) {
+      console.error("Error deleting address", err);
+      throw err;
+    }
+  };
+
   // Place Order
   const placeOrder = async (activeAddress, activeCard) => {
     if (cartItems.length === 0 || !user) return null;
     try {
-      const res = await api.post('/orders', {
-        deliveryAddress: activeAddress.address,
-        paymentMethod: activeCard.cardBrand || "COD"
-      });
-      const order = res.data.data.order;
+      const data = await orderService.placeOrder(
+        activeAddress.address,
+        activeCard.cardBrand || "COD"
+      );
+      const order = data.order;
       setCartItems([]);
       await fetchOrders(user);
       return order._id;
@@ -525,7 +660,7 @@ export const AppProvider = ({ children }) => {
   // Driver Operations
   const acceptJob = async (orderId) => {
     try {
-      await api.put(`/delivery/accept/${orderId}`);
+      await deliveryService.acceptOrder(orderId);
       await fetchDriverDashboard();
     } catch (err) {
       console.error("Error accepting order", err);
@@ -535,18 +670,15 @@ export const AppProvider = ({ children }) => {
   const updateDeliveryStatus = async (deliveryId, newStatus) => {
     try {
       if (newStatus === 'Arrived at Store') {
-        // Arrived at Store is a local transition step in the dashboard UI
         setDriverState(prev => ({
           ...prev,
           liveDeliveries: prev.liveDeliveries.map(d => d.id === deliveryId ? { ...d, status: 'Arrived at Store' } : d)
         }));
       } else if (newStatus === 'On the Way') {
-        // Call pickup API
-        await api.put(`/delivery/pickup/${deliveryId}`);
+        await deliveryService.pickupOrder(deliveryId);
         await fetchDriverDashboard();
       } else if (newStatus === 'Delivered') {
-        // Call deliver API
-        await api.put(`/delivery/deliver/${deliveryId}`);
+        await deliveryService.deliverOrder(deliveryId);
         await fetchDriverDashboard();
       }
     } catch (err) {
@@ -581,6 +713,10 @@ export const AppProvider = ({ children }) => {
 
       userProfile,
       updateProfile,
+      updatePassword,
+      addAddress: handleAddAddress,
+      updateAddress: handleUpdateAddress,
+      deleteAddress: handleDeleteAddress,
       toggleSaveRestaurant,
       placeOrder,
 
@@ -591,7 +727,12 @@ export const AppProvider = ({ children }) => {
 
       driverState,
       acceptJob,
-      updateDeliveryStatus
+      updateDeliveryStatus,
+      initialLoading,
+      initialError,
+      liveOrderCoordinates,
+      joinOrderRoom,
+      socket
     }}>
       {children}
     </AppContext.Provider>

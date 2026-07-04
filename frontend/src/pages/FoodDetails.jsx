@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { motion } from 'framer-motion';
 import { Star, ShoppingCart, Plus, Minus, Check, Flame, ChevronLeft } from 'lucide-react';
+import * as reviewService from '../services/reviewService';
 
 export default function FoodDetails() {
-  const { activeFoodId, navigateTo, addToCart, dishes } = useApp();
+  const { activeFoodId, navigateTo, addToCart, dishes, user } = useApp();
   
   const targetId = activeFoodId || 'd1';
   const dish = dishes.find(d => d.id === targetId) || dishes[0];
@@ -13,6 +14,55 @@ export default function FoodDetails() {
   const [size, setSize] = useState('Standard'); // Standard, Double, Imperial
   const [spice, setSpice] = useState('Mild'); // Mild, Medium, Chef's Signature
   const [selectedAddons, setSelectedAddons] = useState([]);
+
+  const [reviews, setReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+
+  const fetchReviews = async () => {
+    if (!dish?.id) return;
+    try {
+      setLoadingReviews(true);
+      const data = await reviewService.getReviews({ reviewType: 'Food', referenceId: dish.id });
+      setReviews(data.reviews || []);
+    } catch (err) {
+      console.error("Error loading reviews", err);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews();
+  }, [dish?.id]);
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    try {
+      setSubmittingReview(true);
+      setReviewError('');
+      setReviewSuccess(false);
+      await reviewService.createReview({
+        reviewType: 'Food',
+        referenceId: dish.id,
+        rating: newRating,
+        comment: newComment
+      });
+      setReviewSuccess(true);
+      setNewComment('');
+      setNewRating(5);
+      await fetchReviews();
+    } catch (err) {
+      setReviewError(err.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   // Calculate pricing based on size and add-ons
   const sizeSurcharges = { 'Standard': 0, 'Double': 15, 'Imperial': 30 };
@@ -41,6 +91,11 @@ export default function FoodDetails() {
   // Filter 3 related dishes (exclude active dish, prefer same category)
   const related = dishes
     .filter(d => d.id !== dish.id)
+    .sort((a, b) => {
+      if (a.category === dish.category && b.category !== dish.category) return -1;
+      if (a.category !== dish.category && b.category === dish.category) return 1;
+      return 0;
+    })
     .slice(0, 3);
 
   return (
@@ -142,6 +197,113 @@ export default function FoodDetails() {
                   </span>
                 ))}
               </div>
+            </div>
+
+            {/* Reviews Section */}
+            <div style={{ marginTop: '40px' }}>
+              <h3 style={{ fontSize: '20px', marginBottom: '24px' }}>Gastronomy Reviews</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {loadingReviews ? (
+                  <p style={{ color: 'var(--text-muted)' }}>Loading reviews...</p>
+                ) : reviews.length > 0 ? (
+                  reviews.map((rev, idx) => (
+                    <div key={idx} style={{
+                      padding: '20px',
+                      borderRadius: '12px',
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px solid var(--border-color)'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <span style={{ fontWeight: 600, fontSize: '15px' }}>{rev.user?.name || rev.user || "Anonymous User"}</span>
+                        <div style={{ display: 'flex', gap: '2px', color: '#FBBF24' }}>
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star key={i} size={12} fill={i < Math.floor(rev.rating) ? "#FBBF24" : "none"} />
+                          ))}
+                        </div>
+                      </div>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: '1.5' }}>
+                        "{rev.comment}"
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ color: 'var(--text-muted)' }}>No reviews yet for this dish.</p>
+                )}
+              </div>
+
+              {/* Review Submission Form */}
+              {user ? (
+                <form onSubmit={handleSubmitReview} style={{
+                  marginTop: '30px',
+                  padding: '24px',
+                  background: 'rgba(255,255,255,0.01)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px'
+                }}>
+                  <h4 style={{ fontSize: '18px', fontFamily: 'var(--font-heading)' }}>Share Your Rating</h4>
+                  
+                  {reviewError && (
+                    <div style={{ padding: '10px', background: 'rgba(255, 45, 45, 0.08)', border: '1px solid rgba(255, 45, 45, 0.2)', color: 'var(--accent-secondary)', borderRadius: '8px', fontSize: '13px' }}>
+                      {reviewError}
+                    </div>
+                  )}
+                  {reviewSuccess && (
+                    <div style={{ padding: '10px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10B981', borderRadius: '8px', fontSize: '13px' }}>
+                      Your review has been posted successfully.
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Rating:</span>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star 
+                          key={star} 
+                          size={20} 
+                          onClick={() => setNewRating(star)} 
+                          fill={star <= newRating ? "#FBBF24" : "none"} 
+                          stroke={star <= newRating ? "#FBBF24" : "var(--text-muted)"}
+                          style={{ cursor: 'pointer', transition: 'transform 0.1s' }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <textarea 
+                      required 
+                      rows="3" 
+                      placeholder="Write your dish review..." 
+                      className="glass-input" 
+                      value={newComment} 
+                      onChange={(e) => setNewComment(e.target.value)}
+                      style={{ resize: 'vertical', minHeight: '80px', color: 'white' }}
+                    />
+                  </div>
+
+                  <button type="submit" disabled={submittingReview} className="btn-primary" style={{ width: 'fit-content', padding: '8px 16px', fontSize: '13px' }}>
+                    {submittingReview ? 'Posting...' : 'Post Review'}
+                  </button>
+                </form>
+              ) : (
+                <div style={{
+                  marginTop: '30px',
+                  padding: '20px',
+                  background: 'rgba(255,255,255,0.01)',
+                  border: '1px dashed var(--border-color)',
+                  borderRadius: '12px',
+                  textAlign: 'center',
+                  color: 'var(--text-muted)',
+                  fontSize: '14px'
+                }}>
+                  <p>Please <span onClick={() => navigateTo('auth')} style={{ color: 'var(--accent-primary)', cursor: 'pointer', fontWeight: 600 }}>sign in</span> to submit a review.</p>
+                </div>
+              )}
             </div>
           </div>
 

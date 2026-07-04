@@ -4,8 +4,40 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Star, Clock, Heart, Award, Shield, Zap, Sparkles, ShoppingCart } from 'lucide-react';
 
 export default function Home() {
-  const { navigateTo, addToCart, dishes } = useApp();
+  const { navigateTo, addToCart, dishes, initialLoading, initialError } = useApp();
   const [carouselIndex, setCarouselIndex] = useState(0);
+
+  if (initialLoading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '20px', background: 'var(--bg-primary)' }}>
+        <div className="loader" style={{
+          width: '50px',
+          height: '50px',
+          borderRadius: '50%',
+          border: '3px solid rgba(255, 45, 45, 0.1)',
+          borderTopColor: 'var(--accent-primary)',
+          animation: 'spin 1s linear infinite'
+        }} />
+        <p style={{ color: 'var(--text-muted)', fontSize: '16px', letterSpacing: '0.05em' }}>Loading FlavorDash culinary experience...</p>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (initialError) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '20px', background: 'var(--bg-primary)', padding: '20px' }}>
+        <div style={{ color: 'var(--accent-primary)', fontSize: '48px' }}>⚠️</div>
+        <h3 style={{ color: 'var(--text-primary)', fontSize: '20px' }}>Failed to Load Experience</h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px', maxWidth: '400px', textAlign: 'center' }}>{initialError}</p>
+        <button onClick={() => window.location.reload()} className="btn-primary" style={{ padding: '10px 24px' }}>Retry</button>
+      </div>
+    );
+  }
 
   // Filter 4 featured dishes for the home carousel
   const featuredDishes = dishes.slice(0, 4);

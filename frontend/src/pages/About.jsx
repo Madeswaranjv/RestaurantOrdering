@@ -1,7 +1,64 @@
 import React from 'react';
-import { chefs, testimonials, timelineEvents } from '../data/mockData';
 import { motion } from 'framer-motion';
 import { Star, Award, Shield, Target, Eye } from 'lucide-react';
+
+const chefs = [
+  {
+    id: "c1",
+    name: "Chef Jean-Luc Dubois",
+    role: "Culinary Director & Founder",
+    image: "https://images.unsplash.com/photo-1577219491135-ce391730fb2c?auto=format&fit=crop&q=80&w=300",
+    bio: "Former Executive Chef of Michelin 3-starred venues in Paris and London, bringing 25 years of luxury gastronomy experience."
+  },
+  {
+    id: "c2",
+    name: "Chef Kenji Sato",
+    role: "Head of Japanese Culinary Arts",
+    image: "https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&q=80&w=300",
+    bio: "Master sushi artisan trained in Tokyo's elite Ginza district, focusing on traditional Edo-style cuts and fermentation."
+  },
+  {
+    id: "c3",
+    name: "Chef Isabella Rossi",
+    role: "Executive Pastry Chef",
+    image: "https://images.unsplash.com/photo-1566616213894-2d4e1baee5d8?auto=format&fit=crop&q=80&w=300",
+    bio: "Awarded 'Best Pastry Artist' in Milan, Isabella specializes in high-end sugar work and custom French-Italian dessert fusions."
+  }
+];
+
+const testimonials = [
+  {
+    id: "t1",
+    user: "Charlotte Sterling",
+    location: "Chelsea, London",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100",
+    comment: "FlavorDash completely redefines dining at home. The dishes arrive at the perfect temperature, and the presentation matches what you'd experience at L'Ambroisie itself.",
+    rating: 5
+  },
+  {
+    id: "t2",
+    user: "Julian Vanderbilt",
+    location: "Tribeca, New York",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100",
+    comment: "The AI Meal Planner is incredibly accurate. It tailored a daily menu that meets my fitness goals perfectly without compromising on luxury ingredients. Exceptional service.",
+    rating: 5
+  },
+  {
+    id: "t3",
+    user: "Aria Takahashi",
+    location: "Roppongi, Tokyo",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100",
+    comment: "Unbelievable delivery speeds. The Omakase Selection was so fresh it tasted as if the Chef had handed it to me directly across the sushi counter. Recommended!",
+    rating: 5
+  }
+];
+
+const timelineEvents = [
+  { year: "2023", title: "The Vision Born", description: "Conceived by a group of culinary enthusiasts and tech pioneers in London to bridge fine dining and high-end delivery." },
+  { year: "2024", title: "Michelin Partnerships", description: "Secured exclusive partnerships with 15 Michelin-starred restaurants across Paris, Tokyo, and New York." },
+  { year: "2025", title: "AI Integration Launch", description: "Introduced the AI Meal Planner, combining nutritionist models with fine-dining menu structures." },
+  { year: "2026", title: "FlavorDash Global", description: "Serving premium culinary experiences to 12 metropolitan hubs across 4 continents." }
+];
 
 export default function About() {
   
