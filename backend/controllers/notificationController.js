@@ -24,10 +24,9 @@ export const markAsRead = asyncHandler(async (req, res) => {
   );
 });
 export const markAllAsRead = asyncHandler(async (req, res) => {
-  await NotificationRepository.updateOne(
+  await NotificationRepository.updateMany(
     { user: req.user._id, read: false },
-    { read: true },
-    { multi: true }
+    { read: true }
   );
 
   res.status(200).json(

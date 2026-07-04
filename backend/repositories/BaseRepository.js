@@ -31,6 +31,10 @@ export default class BaseRepository {
     return await this.model.findByIdAndDelete(id);
   }
 
+  async updateMany(filter = {}, data = {}) {
+    return await this.model.updateMany(filter, data);
+  }
+
   async deleteMany(filter = {}) {
     return await this.model.deleteMany(filter);
   }

@@ -4,6 +4,7 @@ import MenuRepository from '../repositories/MenuRepository.js';
 import ReviewRepository from '../repositories/ReviewRepository.js';
 import CartRepository from '../repositories/CartRepository.js';
 import DriverProfileRepository from '../repositories/DriverProfileRepository.js';
+import RestaurantRepository from '../repositories/RestaurantRepository.js';
 import Order from '../models/Order.js';
 import User from '../models/User.js';
 import { ApiResponse } from '../utils/ApiResponse.js';

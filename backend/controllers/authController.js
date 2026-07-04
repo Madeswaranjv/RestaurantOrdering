@@ -24,7 +24,7 @@ const generateRefreshToken = (user) => {
 };
 
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, password, phone, role } = req.body;
+  const { name, email, password, phone } = req.body;
 
   // 1. Check if user already exists
   const existingUser = await UserRepository.findByEmail(email);
@@ -38,7 +38,7 @@ export const register = asyncHandler(async (req, res) => {
     email,
     password,
     phone,
-    role: role || 'customer'
+    role: 'customer'
   });
 
   // Remove password from response
@@ -168,7 +168,7 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   );
 
   // Generate reset URL (usually points to frontend route)
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
   // Send Email
@@ -236,7 +236,7 @@ export const googleAuthCallbackSuccess = asyncHandler(async (req, res) => {
   await req.user.save();
 
   // Redirect to frontend with tokens as query params or cookies (redirect is standard for OAuth callbacks)
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   
   res.redirect(
     `${frontendUrl}/oauth-success?token=${accessToken}&refreshToken=${refreshToken}`
