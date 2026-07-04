@@ -19,12 +19,19 @@ const app = express();
 app.use(helmet());
 
 // ─── CORS ────────────────────────────────────────────────────────────
-const clientUrl = process.env.CLIENT_URL;
-app.use(cors({
-  origin: clientUrl && clientUrl !== '*' ? clientUrl.split(',').map(url => url.trim()) : '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  credentials: true
-}));
+const clientUrl =
+  process.env.CLIENT_URL ||
+  process.env.FRONTEND_URL ||
+  "http://localhost:5173";
+
+app.use(
+  cors({
+    origin: clientUrl.split(",").map((url) => url.trim()),
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // ─── Logging ─────────────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'production') {
