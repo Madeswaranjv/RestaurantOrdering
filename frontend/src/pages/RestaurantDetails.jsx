@@ -19,7 +19,9 @@ export default function RestaurantDetails() {
     restaurants,
     dishes,
     categories,
-    user
+    user,
+    initialLoading,
+    initialError
   } = useApp();
 
   const [activeTab, setActiveTab] = useState('All');
@@ -29,9 +31,9 @@ export default function RestaurantDetails() {
 
   // Fallback to restaurant 1 if none active
   const targetId = activeRestaurantId || 'r1';
-  const res = restaurants.find(r => r.id === targetId) || restaurants[0];
-  const resDishes = dishes.filter(d => d.restaurantId === res.id);
-  const isSaved = userProfile.savedRestaurants.includes(res.id);
+  const res = restaurants.find(r => r.id === targetId) || restaurants[0] || null;
+  const resDishes = res ? dishes.filter(d => d.restaurantId === res.id) : [];
+  const isSaved = res ? userProfile.savedRestaurants.includes(res.id) : false;
 
   // Tabs list
   const tabs = ['All', ...categories.map(c => c.name)];
@@ -86,6 +88,31 @@ export default function RestaurantDetails() {
   };
 
   const filteredDishes = resDishes.filter(d => activeTab === 'All' || d.category === activeTab);
+
+  if (initialLoading) {
+    return (
+      <div style={{ background: 'var(--bg-primary)', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+        Loading restaurant...
+      </div>
+    );
+  }
+
+  if (initialError) {
+    return (
+      <div style={{ background: 'var(--bg-primary)', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', padding: '20px', textAlign: 'center' }}>
+        {initialError}
+      </div>
+    );
+  }
+
+  if (!res) {
+    return (
+      <div style={{ background: 'var(--bg-primary)', minHeight: '60vh', display: 'flex', flexDirection: 'column', gap: '18px', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+        <p>No restaurant found.</p>
+        <button className="btn-primary" onClick={() => navigateTo('restaurants')}>Back to Restaurants</button>
+      </div>
+    );
+  }
 
   // Reservation handler
   const handleReservation = (e) => {
@@ -175,12 +202,12 @@ export default function RestaurantDetails() {
 
       {/* 2. BODY CONTENT LAYOUT */}
       <section style={{ padding: '60px 0 120px 0' }}>
-        <div className="container" style={{
+        <div className="container details-layout-grid" style={{
           display: 'grid',
           gridTemplateColumns: '1fr 380px',
           gap: '60px',
           alignItems: 'start'
-        }} className="details-layout-grid">
+        }}>
           
           {/* Left Column: Menu & Gallery */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '60px' }}>
@@ -255,7 +282,7 @@ export default function RestaurantDetails() {
                 {filteredDishes.map((dish) => (
                   <div
                     key={dish.id}
-                    className="glass-card"
+                    className="glass-card dish-row"
                     style={{
                       padding: '20px',
                       display: 'grid',
@@ -263,7 +290,6 @@ export default function RestaurantDetails() {
                       gap: '24px',
                       alignItems: 'center'
                     }}
-                    className="dish-row"
                   >
                     <img 
                       src={dish.image} 

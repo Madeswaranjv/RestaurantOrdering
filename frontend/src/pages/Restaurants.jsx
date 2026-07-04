@@ -1,31 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { motion } from 'framer-motion';
 import { Search, Star, Clock, Heart, ArrowRight } from 'lucide-react';
-import { getRestaurant } from '../services/restaurantService';
 
 export default function Restaurants() {
-  const { navigateTo, userProfile, toggleSaveRestaurant } = useApp();
-  const [restaurant, setRestaurant] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { navigateTo, userProfile, toggleSaveRestaurant, restaurants, initialLoading, initialError } = useApp();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCuisine, setSelectedCuisine] = useState('All');
 
-  useEffect(() => {
-    const fetchSingleRest = async () => {
-      try {
-        setLoading(true);
-        const data = await getRestaurant();
-        setRestaurant(data.restaurant);
-      } catch (err) {
-        setError(err.message || 'Failed to fetch restaurant');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSingleRest();
-  }, []);
-
-  if (loading) {
+  if (initialLoading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '20px', background: 'var(--bg-primary)' }}>
         <div className="loader" style={{
@@ -46,35 +29,18 @@ export default function Restaurants() {
     );
   }
 
-  if (error) {
+  if (initialError) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '20px', background: 'var(--bg-primary)', padding: '20px' }}>
         <div style={{ color: 'var(--accent-primary)', fontSize: '48px' }}>⚠️</div>
         <h3 style={{ color: 'var(--text-primary)', fontSize: '20px' }}>Failed to Load Kitchens</h3>
-        <p style={{ color: 'var(--text-muted)', fontSize: '14px', maxWidth: '400px', textAlign: 'center' }}>{error}</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px', maxWidth: '400px', textAlign: 'center' }}>{initialError}</p>
         <button onClick={() => window.location.reload()} className="btn-primary" style={{ padding: '10px 24px' }}>Retry</button>
       </div>
     );
   }
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCuisine, setSelectedCuisine] = useState('All');
-
-  const restaurantsArray = restaurant ? [{
-    id: restaurant._id,
-    name: restaurant.name,
-    cuisine: restaurant.cuisines || [],
-    rating: restaurant.rating || 5.0,
-    reviewsCount: restaurant.reviews?.length || 0,
-    deliveryTime: "25-35",
-    priceRange: "$$$",
-    coverImage: restaurant.coverImage,
-    logoImage: restaurant.gallery && restaurant.gallery.length > 0 ? restaurant.gallery[0] : "",
-    description: restaurant.description,
-    featured: true,
-    location: restaurant.address,
-    gallery: restaurant.gallery || []
-  }] : [];
+  const restaurantsArray = restaurants;
 
   // Gather unique cuisines from database
   const allCuisines = ['All', ...new Set(restaurantsArray.flatMap(r => r.cuisine))];
@@ -325,10 +291,14 @@ export default function Restaurants() {
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '80px 0', border: '1px dashed var(--border-color)', borderRadius: '16px' }}>
-            <p style={{ color: 'var(--text-muted)' }}>No kitchens found matching your filters.</p>
-            <button className="btn-secondary" onClick={() => { setSearchQuery(''); setSelectedCuisine('All'); }} style={{ marginTop: '20px' }}>
-              Reset Filters
-            </button>
+            <p style={{ color: 'var(--text-muted)' }}>
+              {restaurantsArray.length === 0 ? 'No restaurants found.' : 'No kitchens found matching your filters.'}
+            </p>
+            {restaurantsArray.length > 0 && (
+              <button className="btn-secondary" onClick={() => { setSearchQuery(''); setSelectedCuisine('All'); }} style={{ marginTop: '20px' }}>
+                Reset Filters
+              </button>
+            )}
           </div>
         )}
       </div>

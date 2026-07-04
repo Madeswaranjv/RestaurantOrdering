@@ -21,6 +21,7 @@ const router = Router();
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/restaurant', restaurantRoutes);
+router.use('/restaurants', restaurantRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/menu', menuRoutes);
 router.use('/favorites', favoritesRoutes);

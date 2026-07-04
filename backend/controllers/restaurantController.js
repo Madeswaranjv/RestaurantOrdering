@@ -7,12 +7,21 @@ export const getRestaurant = asyncHandler(async (req, res) => {
   
   if (!restaurant) {
     return res.status(200).json(
-      new ApiResponse(200, null, 'No restaurant profile found. Please seed or create one.')
+      new ApiResponse(200, { restaurant: null, restaurants: [] }, 'No restaurants found. Please seed or create one.')
     );
   }
   
   res.status(200).json(
-    new ApiResponse(200, { restaurant }, 'Restaurant details retrieved successfully')
+    new ApiResponse(200, { restaurant, restaurants: [restaurant] }, 'Restaurant details retrieved successfully')
+  );
+});
+
+export const getRestaurants = asyncHandler(async (req, res) => {
+  const restaurants = await RestaurantRepository.find({}, '', { createdAt: -1 });
+  const restaurant = restaurants[0] || null;
+
+  res.status(200).json(
+    new ApiResponse(200, { restaurant, restaurants }, 'Restaurants retrieved successfully')
   );
 });
 

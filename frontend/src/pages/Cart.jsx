@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { motion } from 'framer-motion';
-import { Trash2, Plus, Minus, Ticket, ShieldCheck, ChevronRight } from 'lucide-react';
+import { Trash2, Plus, Minus, Ticket, ShieldCheck, ChevronRight, ShoppingBag } from 'lucide-react';
 
 export default function Cart() {
   const { 
@@ -11,9 +11,9 @@ export default function Cart() {
     cartSubtotal, 
     deliveryFee, 
     taxes, 
-    cartTotal,
     navigateTo 
   } = useApp();
+  const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
 
   const [promo, setPromo] = useState('');
   const [discount, setDiscount] = useState(0); // in percentage
@@ -46,7 +46,7 @@ export default function Cart() {
           Your Culinary Bag
         </h1>
 
-        {cartItems.length > 0 ? (
+        {safeCartItems.length > 0 ? (
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 400px',
@@ -56,20 +56,25 @@ export default function Cart() {
             
             {/* Left Column: Cart Items */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {cartItems.map((item) => {
+              {safeCartItems.map((item) => {
                 const customizationLabel = [];
                 if (item.customization?.size) customizationLabel.push(`Portion: ${item.customization.size}`);
                 if (item.customization?.spice) customizationLabel.push(`Spice: ${item.customization.spice}`);
-                if (item.customization?.addons?.length > 0) {
-                  customizationLabel.push(`Add-ons: ${item.customization.addons.join(', ')}`);
+                const addons = Array.isArray(item.customization?.addons)
+                  ? item.customization.addons
+                  : [];
+                if (addons.length > 0) {
+                  customizationLabel.push(`Add-ons: ${addons.join(', ')}`);
                 }
+                const itemPrice = Number(item.price || 0);
+                const itemQuantity = Number(item.quantity || 0);
 
                 return (
                   <motion.div
                     key={item.cartItemId}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="glass-card"
+                    className="glass-card cart-item-row"
                     style={{
                       padding: '24px',
                       display: 'grid',
@@ -77,7 +82,6 @@ export default function Cart() {
                       gap: '24px',
                       alignItems: 'center'
                     }}
-                    className="cart-item-row"
                   >
                     {/* Item Image */}
                     <img 
@@ -133,7 +137,7 @@ export default function Cart() {
 
                       <div style={{ textAlign: 'right', minWidth: '80px' }}>
                         <span style={{ fontSize: '18px', fontWeight: 700 }}>
-                          ${(item.price * item.quantity).toFixed(2)}
+                          ${(itemPrice * itemQuantity).toFixed(2)}
                         </span>
                       </div>
 

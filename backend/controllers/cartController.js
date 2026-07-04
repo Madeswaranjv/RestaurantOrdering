@@ -1,8 +1,31 @@
+import mongoose from 'mongoose';
 import CartRepository from '../repositories/CartRepository.js';
 import MenuRepository from '../repositories/MenuRepository.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+
+const normalizeCustomization = (customization = {}) => JSON.stringify(customization || {});
+
+const ensureObjectId = (value, label) => {
+  if (!mongoose.Types.ObjectId.isValid(value)) {
+    throw new ApiError(400, `Valid ${label} is required`);
+  }
+};
+
+const findCartItemIndex = (cart, { cartItemId, menuItemId, customization = {} }) => {
+  return cart.items.findIndex(item => {
+    if (cartItemId && item._id?.toString() === cartItemId) {
+      return true;
+    }
+
+    return (
+      menuItemId &&
+      item.menuItem.toString() === menuItemId &&
+      normalizeCustomization(item.customization) === normalizeCustomization(customization)
+    );
+  });
+};
 
 export const getCart = asyncHandler(async (req, res) => {
   const cart = await CartRepository.findByUserId(req.user._id, true);
@@ -13,6 +36,7 @@ export const getCart = asyncHandler(async (req, res) => {
 
 export const addToCart = asyncHandler(async (req, res) => {
   const { menuItemId, quantity = 1, customization = {} } = req.body;
+  ensureObjectId(menuItemId, 'menu item ID');
 
   // 1. Verify menu item exists
   const menuItem = await MenuRepository.findById(menuItemId);
@@ -24,10 +48,7 @@ export const addToCart = asyncHandler(async (req, res) => {
   const cart = await CartRepository.findByUserId(req.user._id, false);
 
   // 3. Find if item with same ID and customization already exists
-  const existingItemIndex = cart.items.findIndex(item => 
-    item.menuItem.toString() === menuItemId &&
-    JSON.stringify(item.customization || {}) === JSON.stringify(customization)
-  );
+  const existingItemIndex = findCartItemIndex(cart, { menuItemId, customization });
 
   if (existingItemIndex > -1) {
     // Increment quantity
@@ -50,14 +71,13 @@ export const addToCart = asyncHandler(async (req, res) => {
 });
 
 export const updateCartItem = asyncHandler(async (req, res) => {
-  const { menuItemId, quantity, customization = {} } = req.body;
+  const { cartItemId, menuItemId, quantity, customization = {} } = req.body;
+  if (cartItemId) ensureObjectId(cartItemId, 'cart item ID');
+  if (menuItemId) ensureObjectId(menuItemId, 'menu item ID');
 
   const cart = await CartRepository.findByUserId(req.user._id, false);
 
-  const itemIndex = cart.items.findIndex(item => 
-    item.menuItem.toString() === menuItemId &&
-    JSON.stringify(item.customization || {}) === JSON.stringify(customization)
-  );
+  const itemIndex = findCartItemIndex(cart, { cartItemId, menuItemId, customization });
 
   if (itemIndex === -1) {
     throw new ApiError(404, 'Item not found in cart');
@@ -80,13 +100,19 @@ export const updateCartItem = asyncHandler(async (req, res) => {
 });
 
 export const removeCartItem = asyncHandler(async (req, res) => {
-  const { itemId } = req.params; // MenuItem ID
+  const { itemId } = req.params; // Cart item ID or Menu item ID
+  ensureObjectId(itemId, 'item ID');
 
   const cart = await CartRepository.findByUserId(req.user._id, false);
 
-  // Filter out any items matching the menuItem ID (regardless of customization)
+  // Prefer removing one cart line item. Fall back to older menu-item removal semantics.
   const initialLength = cart.items.length;
-  cart.items = cart.items.filter(item => item.menuItem.toString() !== itemId);
+  cart.items = cart.items.filter(item => {
+    if (item._id?.toString() === itemId) {
+      return false;
+    }
+    return item.menuItem.toString() !== itemId;
+  });
 
   if (cart.items.length === initialLength) {
     throw new ApiError(404, 'Item not found in cart');

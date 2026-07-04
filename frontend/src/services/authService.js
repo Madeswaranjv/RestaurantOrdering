@@ -10,8 +10,13 @@ export const login = async (email, password) => {
   return res.data.data;
 };
 
-export const logout = async (token) => {
-  const res = await api.post('/auth/logout', { refreshToken: token });
+export const loginWithGoogle = async (credential) => {
+  const res = await api.post('/auth/google', { credential });
+  return res.data.data;
+};
+
+export const logout = async (refreshToken) => {
+  const res = await api.post('/auth/logout', { refreshToken });
   return res.data;
 };
 

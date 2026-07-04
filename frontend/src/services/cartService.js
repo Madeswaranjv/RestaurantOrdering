@@ -10,8 +10,11 @@ export const addToCart = async (menuItemId, quantity = 1, customization = {}) =>
   return res.data.data;
 };
 
-export const updateCartItem = async (menuItemId, quantity, customization = {}) => {
-  const res = await api.put('/cart/update', { menuItemId, quantity, customization });
+export const updateCartItem = async (item, quantity, customization = {}) => {
+  const payload = typeof item === 'object'
+    ? { ...item, quantity, customization: item.customization || customization }
+    : { cartItemId: item, quantity, customization };
+  const res = await api.put('/cart/update', payload);
   return res.data.data;
 };
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { motion } from 'framer-motion';
-import { User, Clock, Heart, MapPin, CreditCard, Settings, Edit3, CheckCircle, Package, Trash2, KeyRound, Plus } from 'lucide-react';
+import { User, Clock, Heart, MapPin, Settings, Edit3, Package, Trash2, KeyRound, Plus } from 'lucide-react';
 
 export default function UserProfile() {
   const { 
@@ -17,6 +17,13 @@ export default function UserProfile() {
     restaurants, 
     logout 
   } = useApp();
+  const orderHistory = userProfile?.orderHistory || [];
+  const savedRestaurants = userProfile?.savedRestaurants || [];
+  const addresses = userProfile?.addresses || [];
+
+  if (import.meta.env.DEV) {
+    console.log("User:", user);
+  }
 
   const [activeTab, setActiveTab] = useState('overview'); // overview, history, saved, settings
   const [isEditing, setIsEditing] = useState(false);
@@ -43,9 +50,9 @@ export default function UserProfile() {
 
   // Sync profile form when userProfile changes
   useEffect(() => {
-    setName(userProfile.name);
-    setEmail(userProfile.email);
-    setPhone(userProfile.phone);
+    setName(userProfile?.name || '');
+    setEmail(userProfile?.email || '');
+    setPhone(userProfile?.phone || '');
   }, [userProfile]);
 
   const handleUpdateProfile = async (e) => {
@@ -53,6 +60,14 @@ export default function UserProfile() {
     await updateProfile({ name, email, phone });
     setIsEditing(false);
   };
+
+  if (!user && !userProfile?.email) {
+    return (
+      <div style={{ background: 'var(--bg-primary)', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+        Loading profile...
+      </div>
+    );
+  }
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
@@ -110,7 +125,7 @@ export default function UserProfile() {
     if (window.confirm('Delete this address?')) {
       try {
         await deleteAddress(id);
-      } catch (err) {
+      } catch {
         alert('Failed to delete address.');
       }
     }
@@ -140,8 +155,8 @@ export default function UserProfile() {
             {/* User Profile Avatar / Info */}
             <div style={{ textAlign: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '20px' }}>
               <img 
-                src={userProfile.avatar} 
-                alt={userProfile.name} 
+                src={userProfile?.avatar} 
+                alt={userProfile?.name || 'User'} 
                 style={{
                   width: '90px',
                   height: '90px',
@@ -151,7 +166,7 @@ export default function UserProfile() {
                   border: '2px solid var(--accent-primary)'
                 }}
               />
-              <h3 style={{ fontSize: '18px', fontWeight: 600 }}>{userProfile.name}</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: 600 }}>{userProfile?.name || 'FlavorDash User'}</h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>Elite Gold Member</p>
             </div>
 
@@ -230,9 +245,9 @@ export default function UserProfile() {
                   gap: '20px'
                 }} className="profile-stats-grid">
                   {[
-                    { label: "Total Orders placed", value: userProfile.orderHistory.length, icon: <Package style={{ color: 'var(--accent-primary)' }} /> },
-                    { label: "Saved Restaurants", value: userProfile.savedRestaurants.length, icon: <Heart style={{ color: 'var(--accent-secondary)' }} /> },
-                    { label: "Registered Addresses", value: userProfile.addresses.length, icon: <MapPin style={{ color: 'var(--accent-primary)' }} /> }
+                    { label: "Total Orders placed", value: orderHistory.length, icon: <Package style={{ color: 'var(--accent-primary)' }} /> },
+                    { label: "Saved Restaurants", value: savedRestaurants.length, icon: <Heart style={{ color: 'var(--accent-secondary)' }} /> },
+                    { label: "Registered Addresses", value: addresses.length, icon: <MapPin style={{ color: 'var(--accent-primary)' }} /> }
                   ].map((stat, i) => (
                     <div key={i} className="glass-card" style={{ padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
@@ -251,9 +266,9 @@ export default function UserProfile() {
                   <h3 style={{ fontSize: '20px', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
                     Active Order Status
                   </h3>
-                  {userProfile.orderHistory.some(o => o.status === "Preparing" || o.status === "On the Way" || o.status === "Arrived at Store") ? (
+                  {orderHistory.some(o => o.status === "Preparing" || o.status === "On the Way" || o.status === "Arrived at Store") ? (
                     (() => {
-                      const activeOrder = userProfile.orderHistory.find(o => o.status === "Preparing" || o.status === "On the Way" || o.status === "Arrived at Store");
+                      const activeOrder = orderHistory.find(o => o.status === "Preparing" || o.status === "On the Way" || o.status === "Arrived at Store");
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
@@ -324,9 +339,9 @@ export default function UserProfile() {
                 <h3 style={{ fontSize: '22px', borderBottom: '1px solid var(--border-color)', paddingBottom: '20px', marginBottom: '24px' }}>
                   Historic Billings
                 </h3>
-                {userProfile.orderHistory.length > 0 ? (
+                {orderHistory.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {userProfile.orderHistory.map((order, i) => (
+                    {orderHistory.map((order, i) => (
                       <div key={i} style={{
                         padding: '20px',
                         background: 'rgba(255,255,255,0.02)',
@@ -343,11 +358,11 @@ export default function UserProfile() {
                             <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{order.date}</span>
                           </div>
                           <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                            {order.items.map(item => `${item.quantity}x ${item.name}`).join(', ')}
+                            {(order.items || []).map(item => `${item.quantity}x ${item.name}`).join(', ')}
                           </p>
                         </div>
                         <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                          <span style={{ fontSize: '18px', fontWeight: 700 }}>${order.total.toFixed(2)}</span>
+                          <span style={{ fontSize: '18px', fontWeight: 700 }}>${Number(order.total || 0).toFixed(2)}</span>
                           <span style={{
                             fontSize: '11px',
                             fontWeight: 600,
@@ -377,8 +392,8 @@ export default function UserProfile() {
                   gridTemplateColumns: 'repeat(2, 1fr)',
                   gap: '24px'
                 }} className="saved-restaurants-grid">
-                  {userProfile.savedRestaurants.length > 0 ? (
-                    userProfile.savedRestaurants.map(resId => {
+                  {savedRestaurants.length > 0 ? (
+                    savedRestaurants.map(resId => {
                       const res = restaurants.find(r => r.id === resId);
                       if (!res) return null;
                       return (
@@ -388,7 +403,7 @@ export default function UserProfile() {
                           </div>
                           <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <h4 style={{ fontSize: '18px', fontWeight: 600 }}>{res.name}</h4>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '13px', flex: 1 }}>{res.cuisine.join(' • ')}</p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '13px', flex: 1 }}>{(res.cuisine || []).join(' • ')}</p>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '12px', marginTop: '6px' }}>
                               <button onClick={() => navigateTo('restaurant-detail', { restaurantId: res.id })} className="btn-secondary" style={{ padding: '6px 14px', fontSize: '12px' }}>
                                 View Menu
@@ -459,15 +474,15 @@ export default function UserProfile() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                       <div>
                         <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block' }}>FULL NAME</span>
-                        <span style={{ fontSize: '18px', fontWeight: 600, display: 'block', marginTop: '4px' }}>{userProfile.name}</span>
+                        <span style={{ fontSize: '18px', fontWeight: 600, display: 'block', marginTop: '4px' }}>{userProfile?.name || ''}</span>
                       </div>
                       <div>
                         <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block' }}>EMAIL ADDRESS</span>
-                        <span style={{ fontSize: '18px', fontWeight: 600, display: 'block', marginTop: '4px' }}>{userProfile.email}</span>
+                        <span style={{ fontSize: '18px', fontWeight: 600, display: 'block', marginTop: '4px' }}>{userProfile?.email || ''}</span>
                       </div>
                       <div>
                         <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block' }}>PHONE NUMBER</span>
-                        <span style={{ fontSize: '18px', fontWeight: 600, display: 'block', marginTop: '4px' }}>{userProfile.phone || 'Not provided'}</span>
+                        <span style={{ fontSize: '18px', fontWeight: 600, display: 'block', marginTop: '4px' }}>{userProfile?.phone || 'Not provided'}</span>
                       </div>
                       <button onClick={() => setIsEditing(true)} className="btn-primary" style={{ width: 'fit-content', marginTop: '10px' }}>
                         <Edit3 size={16} /> Edit Profile Info
@@ -546,9 +561,9 @@ export default function UserProfile() {
                     </form>
                   )}
 
-                  {userProfile.addresses.length > 0 ? (
+                  {addresses.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {userProfile.addresses.map((addr) => (
+                      {addresses.map((addr) => (
                         <div key={addr.id} style={{
                           padding: '20px',
                           background: 'rgba(255,255,255,0.02)',

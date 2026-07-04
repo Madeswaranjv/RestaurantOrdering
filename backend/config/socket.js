@@ -3,12 +3,33 @@ import registerOrderSocketHandlers from '../sockets/orderSocket.js';
 
 let io = null;
 
+const getClientOrigins = () => {
+  const configuredClientUrls =
+    process.env.CLIENT_URL ||
+    process.env.FRONTEND_URL ||
+    "http://localhost:5173";
+
+  return Array.from(new Set([
+    ...configuredClientUrls.split(",").map((url) => url.trim()).filter(Boolean),
+    ...(process.env.NODE_ENV !== 'production'
+      ? [
+          "http://localhost:5173",
+          "http://127.0.0.1:5173",
+          "http://localhost:5174",
+          "http://127.0.0.1:5174",
+          "http://[::1]:5173",
+          "http://[::1]:5174"
+        ]
+      : [])
+  ]));
+};
+
 export const initSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: '*', // Allow all origins, can be restricted in production
-      methods: ['GET', 'POST', 'PUT', 'DELETE'],
-      credentials: true
+      origin: getClientOrigins(),
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
     }
   });
 
@@ -36,9 +57,9 @@ export const initSocket = (server) => {
       console.log(`Driver socket ${socket.id} joined room: drivers`);
     });
 
-    socket.on('disconnect', () => {
-      console.log(`Client disconnected: ${socket.id}`);
-    });
+    // socket.on('disconnect', () => {
+    //   console.log(`Client disconnected: ${socket.id}`);
+    // });
   });
 
   return io;

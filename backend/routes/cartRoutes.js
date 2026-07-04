@@ -13,21 +13,28 @@ import { validate } from '../validators/validate.js';
 const router = Router();
 
 const validateAddToCart = [
-  body('menuItemId').isMongoId().withMessage('Valid menu item ID is required'),
+  body('menuItemId').notEmpty().withMessage('Menu item ID is required'),
   body('quantity').optional().isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
   body('customization').optional().isObject().withMessage('Customization must be an object'),
   validate
 ];
 
 const validateUpdateCart = [
-  body('menuItemId').isMongoId().withMessage('Valid menu item ID is required'),
+  body('menuItemId').optional().notEmpty().withMessage('Menu item ID cannot be empty'),
+  body('cartItemId').optional().notEmpty().withMessage('Cart item ID cannot be empty'),
+  body().custom((value, { req }) => {
+    if (!req.body.menuItemId && !req.body.cartItemId) {
+      throw new Error('menuItemId or cartItemId is required');
+    }
+    return true;
+  }),
   body('quantity').isInt().withMessage('Quantity must be an integer'),
   body('customization').optional().isObject().withMessage('Customization must be an object'),
   validate
 ];
 
 const validateItemIdParam = [
-  param('itemId').isMongoId().withMessage('Valid item ID format is required'),
+  param('itemId').notEmpty().withMessage('Item ID is required'),
   validate
 ];
 

@@ -5,10 +5,10 @@ import { Star, ShoppingCart, Plus, Minus, Check, Flame, ChevronLeft } from 'luci
 import * as reviewService from '../services/reviewService';
 
 export default function FoodDetails() {
-  const { activeFoodId, navigateTo, addToCart, dishes, user } = useApp();
+  const { activeFoodId, navigateTo, addToCart, dishes, user, initialLoading, initialError } = useApp();
   
   const targetId = activeFoodId || 'd1';
-  const dish = dishes.find(d => d.id === targetId) || dishes[0];
+  const dish = dishes.find(d => d.id === targetId) || dishes[0] || null;
 
   const [quantity, setQuantity] = useState(1);
   const [size, setSize] = useState('Standard'); // Standard, Double, Imperial
@@ -63,6 +63,31 @@ export default function FoodDetails() {
       setSubmittingReview(false);
     }
   };
+
+  if (initialLoading) {
+    return (
+      <div style={{ background: 'var(--bg-primary)', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+        Loading dish...
+      </div>
+    );
+  }
+
+  if (initialError) {
+    return (
+      <div style={{ background: 'var(--bg-primary)', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', padding: '20px', textAlign: 'center' }}>
+        {initialError}
+      </div>
+    );
+  }
+
+  if (!dish) {
+    return (
+      <div style={{ background: 'var(--bg-primary)', minHeight: '60vh', display: 'flex', flexDirection: 'column', gap: '18px', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+        <p>No dish found.</p>
+        <button className="btn-primary" onClick={() => navigateTo('menu')}>Back to Menu</button>
+      </div>
+    );
+  }
 
   // Calculate pricing based on size and add-ons
   const sizeSurcharges = { 'Standard': 0, 'Double': 15, 'Imperial': 30 };

@@ -89,11 +89,11 @@ export default function About() {
 
       {/* 2. VISION & MISSION */}
       <section style={{ padding: '40px 0' }}>
-        <div className="container" style={{
+        <div className="container about-split-grid" style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(2, 1fr)',
           gap: '50px'
-        }} className="about-split-grid">
+        }}>
           
           {/* Mission */}
           <div className="glass-card" style={{ padding: '40px', display: 'flex', gap: '20px' }}>

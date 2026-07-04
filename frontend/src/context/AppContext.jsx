@@ -1,5 +1,4 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import api from '../services/api';
 import * as authService from '../services/authService';
 import * as menuService from '../services/menuService';
 import * as restaurantService from '../services/restaurantService';
@@ -7,10 +6,25 @@ import * as cartService from '../services/cartService';
 import * as orderService from '../services/orderService';
 import * as userService from '../services/userService';
 import * as deliveryService from '../services/deliveryService';
-import * as aiService from '../services/aiService';
 import { io } from 'socket.io-client';
 
 const AppContext = createContext();
+
+const STORAGE_KEYS = {
+  token: 'token',
+  refreshToken: 'refreshToken',
+  user: 'user'
+};
+
+const readStoredUser = () => {
+  try {
+    const storedUser = localStorage.getItem(STORAGE_KEYS.user);
+    return storedUser ? JSON.parse(storedUser) : null;
+  } catch (error) {
+    localStorage.removeItem(STORAGE_KEYS.user);
+    return null;
+  }
+};
 
 export const useApp = () => {
   const context = useContext(AppContext);
@@ -27,11 +41,13 @@ export const AppProvider = ({ children }) => {
   const [activeFoodId, setActiveFoodId] = useState(null);
 
   // Auth State
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [user, setUser] = useState(readStoredUser);
+  const [token, setToken] = useState(localStorage.getItem(STORAGE_KEYS.token) || null);
+  const [authReady, setAuthReady] = useState(false);
 
   // Cart State
   const [cartItems, setCartItems] = useState([]);
+  const [toastMessage, setToastMessage] = useState('');
 
   // Initial Fetch States
   const [initialLoading, setInitialLoading] = useState(false);
@@ -93,14 +109,15 @@ export const AppProvider = ({ children }) => {
     return backendCart.items.map(item => {
       const dish = item.menuItem;
       if (!dish) return null;
+      const customization = item.customization || {};
       return {
-        cartItemId: dish._id,
+        cartItemId: item._id || dish._id,
         dishId: dish._id,
         name: dish.name,
         price: dish.price,
         image: dish.images && dish.images.length > 0 ? dish.images[0] : "",
         quantity: item.quantity,
-        customization: item.customization || {},
+        customization,
         restaurantName: "L'Ambroisie"
       };
     }).filter(Boolean);
@@ -142,6 +159,43 @@ export const AppProvider = ({ children }) => {
     }));
   };
 
+  const showToast = (message) => {
+    setToastMessage(message);
+    window.clearTimeout(showToast.timeoutId);
+    showToast.timeoutId = window.setTimeout(() => setToastMessage(''), 2200);
+  };
+
+  const persistAuthData = (authData) => {
+    const nextToken = authData?.accessToken || authData?.token;
+    const nextRefreshToken = authData?.refreshToken;
+    const nextUser = authData?.user;
+
+    if (!nextToken || !nextUser) {
+      throw new Error('Authentication response did not include a token and user');
+    }
+
+    localStorage.setItem(STORAGE_KEYS.token, nextToken);
+    if (nextRefreshToken) {
+      localStorage.setItem(STORAGE_KEYS.refreshToken, nextRefreshToken);
+    }
+    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(nextUser));
+
+    setToken(nextToken);
+    setUser(nextUser);
+    updateUserProfileFromUserObj(nextUser);
+
+    return { token: nextToken, refreshToken: nextRefreshToken, user: nextUser };
+  };
+
+  const clearAuthData = () => {
+    localStorage.removeItem(STORAGE_KEYS.token);
+    localStorage.removeItem(STORAGE_KEYS.refreshToken);
+    localStorage.removeItem(STORAGE_KEYS.user);
+    setToken(null);
+    setUser(null);
+    setCartItems([]);
+  };
+
   const fetchCart = async () => {
     try {
       const data = await cartService.getCart();
@@ -164,7 +218,7 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const fetchDriverDashboard = async () => {
+  const fetchDriverDashboard = async (driverUser = user) => {
     try {
       const stats = await deliveryService.getDashboard();
       const activeData = await deliveryService.getActiveOrders();
@@ -216,7 +270,7 @@ export const AppProvider = ({ children }) => {
       }));
 
       setDriverState({
-        driverName: user?.name || "Dimitri Vance",
+        driverName: driverUser?.name || "Dimitri Vance",
         weeklyEarnings: stats.weeklyEarnings || 0,
         totalDeliveries: stats.totalDeliveries || 0,
         rating: 4.9,
@@ -251,32 +305,35 @@ export const AppProvider = ({ children }) => {
           menuService.getCategories()
         ]);
 
-        const restObj = resData.restaurant;
-        const fetchedRestaurants = restObj ? [{
+        const restaurantSource = Array.isArray(resData.restaurants) && resData.restaurants.length > 0
+          ? resData.restaurants
+          : (resData.restaurant ? [resData.restaurant] : []);
+
+        const fetchedRestaurants = restaurantSource.map(restObj => ({
           id: restObj._id,
           name: restObj.name,
           cuisine: restObj.cuisines || [],
-          rating: restObj.rating,
+          rating: restObj.rating || 5.0,
           reviewsCount: restObj.reviews?.length || 0,
           deliveryTime: "25-35",
           priceRange: "$$$",
-          coverImage: restObj.coverImage,
+          coverImage: restObj.coverImage || "",
           logoImage: restObj.gallery && restObj.gallery.length > 0 ? restObj.gallery[0] : "",
-          description: restObj.description,
+          description: restObj.description || "",
           featured: true,
-          location: restObj.address,
+          location: restObj.address || "",
           gallery: restObj.gallery || []
-        }] : [];
+        }));
         setRestaurants(fetchedRestaurants);
 
-        const fetchedDishes = menuData.menuItems.map(d => ({
+        const fetchedDishes = (menuData.items || []).map(d => ({
           id: d._id,
           restaurantId: fetchedRestaurants.length > 0 ? fetchedRestaurants[0].id : null,
           name: d.name,
           category: d.category?.name || "Mains",
-          price: d.price,
-          rating: d.rating,
-          description: d.description,
+          price: d.price || 0,
+          rating: d.rating || 5.0,
+          description: d.description || "",
           image: d.images && d.images.length > 0 ? d.images[0] : "",
           ingredients: d.ingredients || [],
           nutrition: d.nutrition || {},
@@ -284,7 +341,7 @@ export const AppProvider = ({ children }) => {
         }));
         setDishes(fetchedDishes);
 
-        const fetchedCategories = catData.map(c => ({
+        const fetchedCategories = (catData.categories || []).map(c => ({
           id: c._id,
           name: c.name,
           description: c.description,
@@ -303,47 +360,75 @@ export const AppProvider = ({ children }) => {
 
   // Parse Google OAuth redirect params and Auto Login Effect
   useEffect(() => {
+    let cancelled = false;
+
     const autoLogin = async () => {
       // Check window URL for OAuth success parameters
       if (window.location.pathname.includes('/oauth-success') || window.location.search.includes('token=')) {
         const params = new URLSearchParams(window.location.search);
         const oauthToken = params.get('token');
+        const oauthRefreshToken = params.get('refreshToken');
+        const oauthError = params.get('error');
+
+        if (oauthError) {
+          clearAuthData();
+          setCurrentPage('auth');
+          window.history.replaceState({}, document.title, '/');
+          showToast(`Google login failed: ${oauthError}`);
+          setAuthReady(true);
+          return;
+        }
+
         if (oauthToken) {
-          localStorage.setItem('token', oauthToken);
+          localStorage.setItem(STORAGE_KEYS.token, oauthToken);
           setToken(oauthToken);
+        }
+        if (oauthRefreshToken) {
+          localStorage.setItem(STORAGE_KEYS.refreshToken, oauthRefreshToken);
         }
         window.history.replaceState({}, document.title, '/');
       }
 
-      const storedToken = localStorage.getItem('token');
+      const storedToken = localStorage.getItem(STORAGE_KEYS.token);
       if (storedToken) {
         try {
           const data = await authService.getMe();
+          if (cancelled) return;
           const userObj = data.user;
           setUser(userObj);
+          localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(userObj));
+          updateUserProfileFromUserObj(userObj);
 
           if (userObj.role === 'deliveryPartner') {
-            await fetchDriverDashboard();
+            await fetchDriverDashboard(userObj);
           } else {
             await fetchCart();
             await fetchOrders(userObj);
           }
         } catch (err) {
+          if (cancelled) return;
           console.error("Auto login failed", err);
-          localStorage.removeItem('token');
-          setUser(null);
+          clearAuthData();
         }
       }
+
+      if (!cancelled) {
+        setAuthReady(true);
+      }
     };
+
+    setAuthReady(false);
     autoLogin();
+
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   // Intercept 401 Unauthorized globally from api.js response
   useEffect(() => {
     const handleUnauthorized = () => {
-      setToken(null);
-      setUser(null);
-      setCartItems([]);
+      clearAuthData();
       navigateTo('auth');
     };
     window.addEventListener('auth-unauthorized', handleUnauthorized);
@@ -449,7 +534,9 @@ export const AppProvider = ({ children }) => {
   // Navigation Helper
   const navigateTo = (page, params = {}) => {
     const protectedPages = ['profile', 'cart', 'checkout', 'delivery-dashboard', 'admin-dashboard'];
-    if (protectedPages.includes(page) && !localStorage.getItem('token')) {
+    const hasToken = Boolean(localStorage.getItem(STORAGE_KEYS.token));
+
+    if (protectedPages.includes(page) && !hasToken) {
       setCurrentPage('auth');
     } else if (page === 'admin-dashboard' && user && user.role !== 'admin') {
       setCurrentPage('home');
@@ -466,14 +553,11 @@ export const AppProvider = ({ children }) => {
   // Auth Operations
   const login = async (email, password) => {
     const data = await authService.login(email, password);
-    const { accessToken, user: userObj } = data;
-    localStorage.setItem('token', accessToken);
-    setToken(accessToken);
-    setUser(userObj);
+    const { user: userObj } = persistAuthData(data);
 
     if (userObj.role === 'deliveryPartner') {
       navigateTo('delivery-dashboard');
-      await fetchDriverDashboard();
+      await fetchDriverDashboard(userObj);
     } else if (userObj.role === 'admin') {
       navigateTo('admin-dashboard');
     } else {
@@ -484,40 +568,64 @@ export const AppProvider = ({ children }) => {
     return userObj;
   };
 
-  const setAuthData = (userObj) => {
-    setUser(userObj);
+  const loginWithGoogle = async (credential) => {
+    const data = await authService.loginWithGoogle(credential);
+    const { user: userObj } = persistAuthData(data);
+
+    if (userObj.role === 'deliveryPartner') {
+      navigateTo('delivery-dashboard');
+      await fetchDriverDashboard(userObj);
+    } else if (userObj.role === 'admin') {
+      navigateTo('admin-dashboard');
+    } else {
+      navigateTo('home');
+      await fetchCart();
+      await fetchOrders(userObj);
+    }
+
+    return userObj;
+  };
+
+  const setAuthData = (authData) => {
+    if (authData?.token || authData?.accessToken) {
+      return persistAuthData(authData);
+    }
+    setUser(authData);
+    if (authData) {
+      localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(authData));
+    }
+    return authData;
   };
 
   const logout = async () => {
-    const storedToken = localStorage.getItem('token');
-    if (storedToken) {
+    const storedRefreshToken = localStorage.getItem(STORAGE_KEYS.refreshToken);
+    if (storedRefreshToken) {
       try {
-        await authService.logout(storedToken).catch(() => {});
+        await authService.logout(storedRefreshToken).catch(() => {});
       } catch (err) {}
-      localStorage.removeItem('token');
     }
-    setToken(null);
-    setUser(null);
-    setCartItems([]);
+    clearAuthData();
     navigateTo('home');
   };
 
   // Cart Operations
   const addToCart = async (dish, customization = {}, quantity = 1) => {
-    if (!localStorage.getItem('token')) {
+    if (!localStorage.getItem(STORAGE_KEYS.token)) {
       navigateTo('auth');
       return;
     }
     try {
       const data = await cartService.addToCart(dish.id || dish._id, quantity, customization);
       setCartItems(mapBackendCartToFrontend(data.cart));
+      showToast("Added to cart");
     } catch (err) {
       console.error("Error adding to cart", err);
+      showToast(err.response?.data?.message || "Could not add item to cart");
     }
   };
 
   const removeFromCart = async (cartItemId) => {
-    if (!localStorage.getItem('token')) return;
+    if (!localStorage.getItem(STORAGE_KEYS.token)) return;
     try {
       const data = await cartService.removeCartItem(cartItemId);
       setCartItems(mapBackendCartToFrontend(data.cart));
@@ -527,13 +635,18 @@ export const AppProvider = ({ children }) => {
   };
 
   const updateQuantity = async (cartItemId, newQty) => {
-    if (!localStorage.getItem('token')) return;
+    if (!localStorage.getItem(STORAGE_KEYS.token)) return;
     if (newQty <= 0) {
       await removeFromCart(cartItemId);
       return;
     }
     try {
-      const data = await cartService.updateCartItem(cartItemId, newQty);
+      const item = cartItems.find(cartItem => cartItem.cartItemId === cartItemId);
+      const data = await cartService.updateCartItem({
+        cartItemId,
+        menuItemId: item?.dishId,
+        customization: item?.customization || {}
+      }, newQty);
       setCartItems(mapBackendCartToFrontend(data.cart));
     } catch (err) {
       console.error("Error updating quantity", err);
@@ -541,7 +654,7 @@ export const AppProvider = ({ children }) => {
   };
 
   const clearCart = async () => {
-    if (!localStorage.getItem('token')) return;
+    if (!localStorage.getItem(STORAGE_KEYS.token)) return;
     try {
       await cartService.clearCart();
       setCartItems([]);
@@ -557,7 +670,7 @@ export const AppProvider = ({ children }) => {
 
   // Profile Address & Password modifications
   const toggleSaveRestaurant = async (restaurantId) => {
-    if (!localStorage.getItem('token')) {
+    if (!localStorage.getItem(STORAGE_KEYS.token)) {
       navigateTo('auth');
       return;
     }
@@ -690,7 +803,9 @@ export const AppProvider = ({ children }) => {
     <AppContext.Provider value={{
       user,
       token,
+      authReady,
       login,
+      loginWithGoogle,
       setAuthData,
       logout,
       restaurants,
@@ -735,6 +850,24 @@ export const AppProvider = ({ children }) => {
       socket
     }}>
       {children}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          right: '24px',
+          bottom: '24px',
+          zIndex: 2000,
+          background: 'rgba(17, 17, 17, 0.96)',
+          color: 'var(--text-primary)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          padding: '12px 18px',
+          boxShadow: '0 12px 28px rgba(0,0,0,0.35)',
+          fontSize: '14px',
+          fontWeight: 600
+        }}>
+          {toastMessage}
+        </div>
+      )}
     </AppContext.Provider>
   );
 };

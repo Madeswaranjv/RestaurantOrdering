@@ -203,14 +203,14 @@ export default function MealPlanner() {
                 style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}
               >
                 {/* Stats Dashboard */}
-                <div className="glass-card" style={{
+                <div className="glass-card stats-grid" style={{
                   padding: '30px',
                   background: 'linear-gradient(135deg, rgba(25,25,25,0.8) 0%, rgba(15,15,15,0.8) 100%)',
                   display: 'grid',
                   gridTemplateColumns: 'repeat(4, 1fr)',
                   gap: '20px',
                   textAlign: 'center'
-                }} className="stats-grid">
+                }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'var(--accent-primary)' }}>
                       <Flame size={16} fill="var(--accent-primary)" />
@@ -237,7 +237,7 @@ export default function MealPlanner() {
                   {mealPlan.meals.map((meal, index) => (
                     <div
                       key={index}
-                      className="glass-card"
+                      className="glass-card meal-row"
                       style={{
                         padding: '24px',
                         display: 'grid',
@@ -245,7 +245,6 @@ export default function MealPlanner() {
                         gap: '24px',
                         alignItems: 'center'
                       }}
-                      className="meal-row"
                     >
                       <img
                         src={meal.dish.image}

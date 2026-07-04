@@ -4,7 +4,9 @@ import { motion } from 'framer-motion';
 import { Search, Star, ShoppingCart, Sparkles, Eye } from 'lucide-react';
 
 export default function Menu() {
-  const { navigateTo, addToCart, dishes, initialLoading, initialError } = useApp();
+  const { navigateTo, addToCart, dishes, categories: categoryData, initialLoading, initialError } = useApp();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('All');
 
   if (initialLoading) {
     return (
@@ -38,16 +40,13 @@ export default function Menu() {
     );
   }
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
-
-  const categories = ['All', 'Starters', 'Mains', 'Desserts'];
+  const categories = ['All', ...(categoryData.length > 0 ? categoryData.map(category => category.name) : ['Starters', 'Mains', 'Desserts'])];
 
   // Filtering
   const filteredDishes = dishes.filter(dish => {
     const matchesSearch = dish.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          dish.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          dish.ingredients.some(i => i.toLowerCase().includes(searchQuery.toLowerCase()));
+                          (dish.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (dish.ingredients || []).some(i => i.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCategory = activeCategory === 'All' || dish.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
