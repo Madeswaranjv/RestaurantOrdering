@@ -209,3 +209,13 @@ export const getDashboard = asyncHandler(async (req, res) => {
     }, 'Delivery partner dashboard retrieved successfully')
   );
 });
+
+export const getActiveOrders = asyncHandler(async (req, res) => {
+  const orders = await OrderRepository.find({
+    deliveryPartner: req.user._id,
+    status: { $in: ['CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY'] }
+  });
+  res.status(200).json(
+    new ApiResponse(200, { orders }, 'Active delivery orders retrieved successfully')
+  );
+});

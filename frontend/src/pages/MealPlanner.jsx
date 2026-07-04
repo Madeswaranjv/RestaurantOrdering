@@ -1,68 +1,74 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { dishes } from '../data/mockData';
 import { motion } from 'framer-motion';
 import { Sparkles, RefreshCw, ShoppingCart, Info, Flame, ShieldAlert, Award } from 'lucide-react';
+import api from '../services/api';
 
 export default function MealPlanner() {
-  const { mealPlannerInput, setMealPlannerInput, mealPlan, setMealPlan, addToCart } = useApp();
+  const { mealPlannerInput, setMealPlannerInput, mealPlan, setMealPlan, addToCart, dishes } = useApp();
   const [loading, setLoading] = useState(false);
 
   const handleInputChange = (field, val) => {
     setMealPlannerInput(prev => ({ ...prev, [field]: val }));
   };
 
-  const generateMealPlan = () => {
+  const generateMealPlan = async () => {
     setLoading(true);
     setMealPlan(null);
+    try {
+      const res = await api.post('/ai/meal-plan', {
+        age: Number(mealPlannerInput.age),
+        weight: Number(mealPlannerInput.weight),
+        goal: mealPlannerInput.goal,
+        dietaryPreference: mealPlannerInput.diet
+      });
 
-    setTimeout(() => {
-      // Simple filter based on diet preferences
-      let availableDishes = [...dishes];
-      if (mealPlannerInput.diet === 'Vegetarian') {
-        // Filter out items that contain beef, chicken, or boar in name/description/ingredients
-        availableDishes = dishes.filter(d => 
-          !d.name.toLowerCase().includes('chicken') && 
-          !d.name.toLowerCase().includes('boar') && 
-          !d.name.toLowerCase().includes('steak') &&
-          !d.ingredients.some(i => 
-            i.toLowerCase().includes('chicken') || 
-            i.toLowerCase().includes('boar') || 
-            i.toLowerCase().includes('beef') || 
-            i.toLowerCase().includes('caviar')
-          )
-        );
-      }
+      const plan = res.data.data.mealPlan.plan;
 
-      // Select three dishes: Starter for Breakfast, Main for Lunch, Dessert/Main for Dinner
-      const starters = availableDishes.filter(d => d.category === 'Starters');
-      const mains = availableDishes.filter(d => d.category === 'Mains');
-      const desserts = availableDishes.filter(d => d.category === 'Desserts');
+      const starters = dishes.filter(d => d.category === 'Starters');
+      const mains = dishes.filter(d => d.category === 'Mains');
+      const desserts = dishes.filter(d => d.category === 'Desserts');
 
-      const breakfast = starters[Math.floor(Math.random() * starters.length)] || dishes[0];
-      const lunch = mains[Math.floor(Math.random() * mains.length)] || dishes[1];
-      const dinner = mains.filter(d => d.id !== lunch.id)[0] || desserts[0] || dishes[2];
+      const bDishBase = starters[Math.floor(Math.random() * starters.length)] || dishes[0];
+      const lDishBase = mains[Math.floor(Math.random() * mains.length)] || dishes[1];
+      const dDishBase = desserts[Math.floor(Math.random() * desserts.length)] || dishes[2];
 
-      const totCalories = (breakfast.nutrition?.calories || 400) + (lunch.nutrition?.calories || 600) + (dinner.nutrition?.calories || 500);
-      const totProtein = (breakfast.nutrition?.protein || 20) + (lunch.nutrition?.protein || 30) + (dinner.nutrition?.protein || 25);
-      const totCarbs = (breakfast.nutrition?.carbs || 40) + (lunch.nutrition?.carbs || 60) + (dinner.nutrition?.carbs || 50);
-      const totFat = (breakfast.nutrition?.fat || 15) + (lunch.nutrition?.fat || 25) + (dinner.nutrition?.fat || 20);
+      const bDish = {
+        ...bDishBase,
+        name: plan.breakfast.split('.')[0] || bDishBase.name,
+        description: plan.breakfast
+      };
+
+      const lDish = {
+        ...lDishBase,
+        name: plan.lunch.split('.')[0] || lDishBase.name,
+        description: plan.lunch
+      };
+
+      const dDish = {
+        ...dDishBase,
+        name: plan.dinner.split('.')[0] || dDishBase.name,
+        description: plan.dinner
+      };
 
       setMealPlan({
         meals: [
-          { type: "Breakfast", dish: breakfast },
-          { type: "Lunch", dish: lunch },
-          { type: "Dinner", dish: dinner }
+          { type: "Breakfast", dish: bDish },
+          { type: "Lunch", dish: lDish },
+          { type: "Dinner", dish: dDish }
         ],
         stats: {
-          calories: totCalories,
-          protein: totProtein,
-          carbs: totCarbs,
-          fat: totFat
+          calories: plan.calories,
+          protein: plan.protein,
+          carbs: plan.carbs,
+          fat: plan.fats
         }
       });
+    } catch (err) {
+      console.error("Error generating meal plan from AI", err);
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   const addWholePlanToCart = () => {

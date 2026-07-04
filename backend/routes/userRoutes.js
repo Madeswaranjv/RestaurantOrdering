@@ -5,7 +5,8 @@ import {
   changePassword,
   addAddress,
   updateAddress,
-  deleteAddress
+  deleteAddress,
+  toggleSaveRestaurant
 } from '../controllers/userController.js';
 import {
   validateUpdateProfile,
@@ -28,5 +29,8 @@ router.put('/change-password', validateChangePassword, changePassword);
 router.post('/address', validateAddress, addAddress);
 router.put('/address/:id', validateAddressId, validateAddress, updateAddress);
 router.delete('/address/:id', validateAddressId, deleteAddress);
+
+// Save/unsave restaurant
+router.put('/save-restaurant/:id', toggleSaveRestaurant);
 
 export default router;

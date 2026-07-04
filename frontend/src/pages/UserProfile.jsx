@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { restaurants } from '../data/mockData';
 import { motion } from 'framer-motion';
 import { User, Clock, Heart, MapPin, CreditCard, Settings, Edit3, CheckCircle, Package } from 'lucide-react';
 
 export default function UserProfile() {
-  const { userProfile, updateProfile, toggleSaveRestaurant, navigateTo } = useApp();
+  const { userProfile, updateProfile, toggleSaveRestaurant, navigateTo, restaurants, logout } = useApp();
   const [activeTab, setActiveTab] = useState('overview'); // overview, history, saved, settings
   const [isEditing, setIsEditing] = useState(false);
 
@@ -14,9 +13,9 @@ export default function UserProfile() {
   const [email, setEmail] = useState(userProfile.email);
   const [phone, setPhone] = useState(userProfile.phone);
 
-  const handleUpdateProfile = (e) => {
+  const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    updateProfile({ name, email, phone });
+    await updateProfile({ name, email, phone });
     setIsEditing(false);
   };
 
@@ -94,6 +93,30 @@ export default function UserProfile() {
                   </button>
                 );
               })}
+              <button
+                onClick={logout}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px 18px',
+                  background: 'transparent',
+                  color: 'var(--text-muted)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '15px',
+                  fontWeight: 500,
+                  textAlign: 'left',
+                  transition: 'var(--transition-fast)',
+                  marginTop: '12px',
+                  borderTop: '1px solid var(--border-color)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-primary)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+              >
+                Sign Out
+              </button>
             </div>
           </div>
 

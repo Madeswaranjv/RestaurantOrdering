@@ -16,6 +16,7 @@ import UserProfile from './pages/UserProfile';
 import DeliveryDashboard from './pages/DeliveryDashboard';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import Auth from './pages/Auth';
 
 function MainLayout() {
   const { currentPage } = useApp();
@@ -46,6 +47,8 @@ function MainLayout() {
         return <About />;
       case 'contact':
         return <Contact />;
+      case 'auth':
+        return <Auth />;
       default:
         return <Home />;
     }

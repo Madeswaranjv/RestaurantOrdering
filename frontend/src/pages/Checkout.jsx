@@ -24,8 +24,8 @@ export default function Checkout() {
   const activeAddress = userProfile.addresses.find(a => a.id === selectedAddressId) || userProfile.addresses[0];
   const activeCard = userProfile.savedCards.find(c => c.id === selectedCardId) || userProfile.savedCards[0];
 
-  const handlePlaceOrder = () => {
-    const orderId = placeOrder(activeAddress, activeCard);
+  const handlePlaceOrder = async () => {
+    const orderId = await placeOrder(activeAddress, activeCard);
     if (orderId) {
       setConfirmedOrderId(orderId);
       setStep(4);

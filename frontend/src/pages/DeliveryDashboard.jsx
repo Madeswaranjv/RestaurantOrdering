@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { LayoutDashboard, ShoppingBag, History, DollarSign, User, Sparkles, Navigation, AlertTriangle, TrendingUp } from 'lucide-react';
 
 export default function DeliveryDashboard() {
-  const { driverState, updateDeliveryStatus } = useApp();
+  const { driverState, updateDeliveryStatus, acceptJob, logout } = useApp();
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, orders, earnings, heatmap
 
   const sidebarLinks = [
@@ -84,6 +84,30 @@ export default function DeliveryDashboard() {
                   </button>
                 );
               })}
+              <button
+                onClick={logout}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px 18px',
+                  background: 'transparent',
+                  color: 'var(--text-muted)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '15px',
+                  fontWeight: 500,
+                  textAlign: 'left',
+                  transition: 'var(--transition-fast)',
+                  marginTop: '12px',
+                  borderTop: '1px solid var(--border-color)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-primary)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+              >
+                Sign Out
+              </button>
             </div>
           </div>
 
@@ -224,6 +248,15 @@ export default function DeliveryDashboard() {
                           <span style={{ fontSize: '22px', fontWeight: 700, color: '#10B981' }}>+${del.amount.toFixed(2)}</span>
                           
                           <div style={{ display: 'flex', gap: '10px' }}>
+                            {del.status === 'Ready for Pickup' && (
+                              <button 
+                                onClick={() => acceptJob(del.id)}
+                                className="btn-primary" 
+                                style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '20px', background: 'var(--accent-secondary)' }}
+                              >
+                                Accept Job
+                              </button>
+                            )}
                             {del.status === 'Accepted' && (
                               <button 
                                 onClick={() => updateDeliveryStatus(del.id, 'Arrived at Store')}

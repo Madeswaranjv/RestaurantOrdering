@@ -6,7 +6,8 @@ import {
   deliverOrder,
   getHistory,
   getEarnings,
-  getDashboard
+  getDashboard,
+  getActiveOrders
 } from '../controllers/deliveryController.js';
 import { authenticate, authorizeRoles } from '../middlewares/authMiddleware.js';
 import { param } from 'express-validator';
@@ -23,6 +24,7 @@ const validateOrderIdParam = [
 router.use(authenticate, authorizeRoles('deliveryPartner'));
 
 router.get('/orders', getAvailableOrders);
+router.get('/active', getActiveOrders);
 router.put('/accept/:orderId', validateOrderIdParam, acceptOrder);
 router.put('/pickup/:orderId', validateOrderIdParam, pickupOrder);
 router.put('/deliver/:orderId', validateOrderIdParam, deliverOrder);

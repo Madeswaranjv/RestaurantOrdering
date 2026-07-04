@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { restaurants, dishes } from '../data/mockData';
 import InteractiveMap from '../components/InteractiveMap';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, Clock, MapPin, Calendar, Heart, ShoppingBag, Plus, Minus, X } from 'lucide-react';
@@ -15,7 +14,9 @@ export default function RestaurantDetails() {
     removeFromCart, 
     cartSubtotal,
     userProfile,
-    toggleSaveRestaurant 
+    toggleSaveRestaurant,
+    restaurants,
+    dishes
   } = useApp();
 
   const [activeTab, setActiveTab] = useState('All');

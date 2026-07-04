@@ -135,3 +135,18 @@ export const deleteAddress = asyncHandler(async (req, res) => {
     new ApiResponse(200, { addresses: user.addresses }, 'Address removed successfully')
   );
 });
+
+export const toggleSaveRestaurant = asyncHandler(async (req, res) => {
+  const { id } = req.params; // restaurant ID
+  const user = await UserRepository.findById(req.user._id);
+  const index = user.savedRestaurants.indexOf(id);
+  if (index > -1) {
+    user.savedRestaurants.splice(index, 1);
+  } else {
+    user.savedRestaurants.push(id);
+  }
+  await user.save();
+  res.status(200).json(
+    new ApiResponse(200, { savedRestaurants: user.savedRestaurants }, 'Saved restaurants updated successfully')
+  );
+});
