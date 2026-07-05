@@ -440,7 +440,9 @@ export const AppProvider = ({ children }) => {
   // Socket.IO Effect
   useEffect(() => {
     if (user) {
-      const socketConn = io('http://localhost:5000');
+      const socketConn = io(
+  import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'
+);
 
       socketConn.on('connect', () => {
         console.log('Socket.IO connected:', socketConn.id);
