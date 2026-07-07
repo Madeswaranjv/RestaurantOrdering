@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Star, Award, Shield, Target, Eye } from 'lucide-react';
+import { showSuccess, showError } from "../utils/toast";
 
 const chefs = [
   {

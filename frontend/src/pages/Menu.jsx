@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { motion } from 'framer-motion';
 import { Search, Star, ShoppingCart, Sparkles, Eye } from 'lucide-react';
+import { showSuccess, showError } from "../utils/toast";
+
 
 export default function Menu() {
   const { navigateTo, addToCart, dishes, categories: categoryData, initialLoading, initialError } = useApp();

@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { motion } from 'framer-motion';
 import { Sparkles, RefreshCw, ShoppingCart, Info, Flame, ShieldAlert, Award } from 'lucide-react';
 import api from '../services/api';
+import { showSuccess, showError } from "../utils/toast";
 
 export default function MealPlanner() {
   const { mealPlannerInput, setMealPlannerInput, mealPlan, setMealPlan, addToCart, dishes } = useApp();
