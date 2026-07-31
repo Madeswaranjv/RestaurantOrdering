@@ -11,7 +11,7 @@ import configurePassport from './config/passport.js';
 import apiRoutes from './routes/index.js';
 import { errorHandler } from './middlewares/errorMiddleware.js';
 import { apiLimiter } from './middlewares/rateLimitMiddleware.js';
-import swaggerSpec from './docs/swagger.js';
+import swaggerSpec from './docs/swagger.js';  
 
 const app = express();
 
