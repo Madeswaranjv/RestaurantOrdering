@@ -80,6 +80,12 @@ export default function About() {
       }}>
         <div className="container">
           <motion.div initial="hidden" animate="visible" variants={fadeInUp}>
+            <img 
+              src="/logo.png" 
+              alt="FlavorDash" 
+              className="brand-logo"
+              style={{ height: '64px', margin: '0 auto 28px auto' }} 
+            />
             <h1 className="hero-heading" style={{ marginBottom: '24px' }}>Cultivating Gastronomy</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '18px', maxWidth: '600px', margin: '0 auto', lineHeight: '1.7' }}>
               We started with a simple belief: that fine dining shouldn't be confined to dining halls. It is a sensory art that can travel.

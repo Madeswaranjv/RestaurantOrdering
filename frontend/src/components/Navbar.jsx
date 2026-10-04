@@ -50,13 +50,18 @@ export default function Navbar() {
             onClick={() => handleNavClick('home')} 
             style={{ 
               cursor: 'pointer', 
-              fontSize: '32px', 
-              fontWeight: 800, 
-              letterSpacing: '-0.03em', 
-              fontFamily: 'var(--font-heading)'
+              display: 'flex',
+              alignItems: 'center',
+              textDecoration: 'none'
             }}
+            title="FlavorDash — Luxury Gastronomy Delivery"
           >
-            Flavor<span style={{ color: 'var(--accent-primary)' }}>Dash</span>
+            <img 
+              src="/logo.png" 
+              alt="FlavorDash" 
+              className="brand-logo" 
+              style={{ height: '48px', maxWidth: '200px' }} 
+            />
           </div>
 
           {/* Desktop Nav */}
@@ -181,6 +186,17 @@ export default function Navbar() {
             gap: '20px',
             zIndex: 99
           }}>
+            <div 
+              onClick={() => handleNavClick('home')}
+              style={{ cursor: 'pointer', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}
+            >
+              <img 
+                src="/logo.png" 
+                alt="FlavorDash" 
+                className="brand-logo" 
+                style={{ height: '38px' }} 
+              />
+            </div>
             {navLinks.map(link => (
               <div
                 key={link.id}

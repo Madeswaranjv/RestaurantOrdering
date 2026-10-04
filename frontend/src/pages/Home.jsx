@@ -109,26 +109,44 @@ export default function Home() {
             variants={staggerContainer}
             style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}
           >
-            {/* Premium Badge */}
+            {/* Brand Emblem & Distinction */}
             <motion.div 
               variants={fadeInUp}
               style={{
-                display: 'inline-flex',
+                display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                background: 'rgba(255, 45, 45, 0.08)',
-                border: '1px solid rgba(255, 45, 45, 0.2)',
-                color: 'var(--accent-secondary)',
-                padding: '8px 16px',
-                borderRadius: '80px',
-                fontSize: '13px',
-                fontWeight: 600,
-                letterSpacing: '0.15em',
-                textTransform: 'uppercase',
-                width: 'fit-content'
+                gap: '16px',
+                flexWrap: 'wrap'
               }}
             >
-              <Sparkles size={14} /> The Critic's Choice • 2026
+              <img 
+                src="/logo.png" 
+                alt="FlavorDash" 
+                className="brand-logo"
+                style={{ 
+                  height: '58px',
+                  maxWidth: '220px',
+                  filter: 'drop-shadow(0 4px 18px rgba(255, 45, 45, 0.25))'
+                }} 
+              />
+              <div 
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'rgba(255, 45, 45, 0.08)',
+                  border: '1px solid rgba(255, 45, 45, 0.25)',
+                  color: 'var(--accent-secondary)',
+                  padding: '8px 18px',
+                  borderRadius: '80px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase'
+                }}
+              >
+                <Sparkles size={14} /> The Critic's Choice • 2026
+              </div>
             </motion.div>
 
             {/* Title */}

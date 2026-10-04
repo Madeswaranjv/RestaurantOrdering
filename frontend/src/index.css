@@ -224,3 +224,20 @@ h1, h2, h3, h4, h5, h6 {
 .gradient-overlay {
   background: linear-gradient(to top, rgba(10, 10, 10, 0.9) 0%, rgba(10, 10, 10, 0) 100%);
 }
+
+/* Brand Logo */
+.brand-logo {
+  height: 52px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 16px rgba(255, 45, 45, 0.2));
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease;
+  user-select: none;
+  display: block;
+}
+
+.brand-logo:hover {
+  transform: scale(1.03);
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 24px rgba(255, 45, 45, 0.35));
+}
+

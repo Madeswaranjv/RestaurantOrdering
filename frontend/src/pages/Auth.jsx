@@ -137,6 +137,12 @@ export default function Auth() {
         style={{ width: '100%', maxWidth: '450px', padding: '40px', display: 'flex', flexDirection: 'column', gap: '24px' }}
       >
         <div style={{ textAlign: 'center' }}>
+          <img 
+            src="/logo.png" 
+            alt="FlavorDash" 
+            className="brand-logo"
+            style={{ height: '54px', margin: '0 auto 16px auto' }} 
+          />
           <h2 style={{ fontSize: '32px', fontFamily: 'var(--font-heading)', marginBottom: '8px' }}>
             {isLogin ? 'Welcome Back' : 'Create Account'}
           </h2>

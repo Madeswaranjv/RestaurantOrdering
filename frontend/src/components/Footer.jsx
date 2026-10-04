@@ -34,8 +34,17 @@ export default function Footer() {
         }}>
           {/* Brand */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-heading)' }}>
-              Flavor<span style={{ color: 'var(--accent-primary)' }}>Dash</span>
+            <div 
+              onClick={() => navigateTo('home')} 
+              style={{ cursor: 'pointer', display: 'inline-flex' }}
+              title="FlavorDash"
+            >
+              <img 
+                src="/logo.png" 
+                alt="FlavorDash" 
+                className="brand-logo" 
+                style={{ height: '46px', maxWidth: '200px' }} 
+              />
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '15px', lineHeight: '1.6' }}>
               Experience the absolute pinnacle of luxury culinary delivery. We partner with the world's most acclaimed chefs to bring Michelin-starred dining directly to your private table.
