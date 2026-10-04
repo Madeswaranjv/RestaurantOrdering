@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { motion } from 'framer-motion';
-import { ArrowRight, Star, Clock, Heart, Award, Shield, Zap, Sparkles, ShoppingCart } from 'lucide-react';
+import { ArrowRight, Star, Clock, Heart, Award, Shield, Zap, ShoppingCart } from 'lucide-react';
 
 export default function Home() {
   const { navigateTo, addToCart, dishes, initialLoading, initialError } = useApp();
@@ -109,14 +109,12 @@ export default function Home() {
             variants={staggerContainer}
             style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}
           >
-            {/* Brand Emblem & Distinction */}
+            {/* Brand Emblem */}
             <motion.div 
               variants={fadeInUp}
               style={{
                 display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                flexWrap: 'wrap'
+                alignItems: 'center'
               }}
             >
               <img 
@@ -129,24 +127,6 @@ export default function Home() {
                   filter: 'drop-shadow(0 4px 18px rgba(255, 45, 45, 0.25))'
                 }} 
               />
-              <div 
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: 'rgba(255, 45, 45, 0.08)',
-                  border: '1px solid rgba(255, 45, 45, 0.25)',
-                  color: 'var(--accent-secondary)',
-                  padding: '8px 18px',
-                  borderRadius: '80px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  letterSpacing: '0.15em',
-                  textTransform: 'uppercase'
-                }}
-              >
-                <Sparkles size={14} /> The Critic's Choice • 2026
-              </div>
             </motion.div>
 
             {/* Title */}
