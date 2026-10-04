@@ -153,6 +153,30 @@ npm run dev
 ```
 The application will launch at `http://localhost:5173`.
 
+### 4. Desktop application (Electron)
+
+The repository root contains the Electron shell. It runs the React interface in a native window and, in a packaged build, starts the Express API automatically.
+Complete the backend and frontend dependency installs above before using these commands.
+
+```bash
+# From the repository root
+npm install
+
+# Development: starts API, Vite, and the Electron window together
+npm run dev
+
+# Build a Windows installer in release/
+npm run dist
+```
+
+The packaged app never includes `backend/.env`. On its first launch it creates a safe `backend.env` template in its user-data folder and asks the user to configure the MongoDB URI, authentication secrets, and optional service keys. This keeps development credentials out of the distributable installer.
+
+For a portable test build without an installer, use:
+
+```bash
+npx electron-builder --dir
+```
+
 ---
 
 ## 📁 Repository Structure

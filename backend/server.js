@@ -2,7 +2,7 @@ import http from 'http';
 import dotenv from 'dotenv';
 
 // Load environment variables FIRST, before any other imports that might use them
-dotenv.config();
+dotenv.config(process.env.FLAVORDASH_ENV_FILE ? { path: process.env.FLAVORDASH_ENV_FILE } : {});
 
 const PORT = process.env.PORT || 5000;
 

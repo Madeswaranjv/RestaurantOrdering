@@ -25,7 +25,8 @@ const configuredClientUrls =
   "http://localhost:5173";
 
 const clientOrigins = Array.from(new Set([
-  ...configuredClientUrls.split(",").map((url) => url.trim()).filter(Boolean),
+  ...configuredClientUrls.split(",").map((url) => url.trim().replace(/\/+$/, '')).filter(Boolean),
+  ...(process.env.ELECTRON_RENDERER_ORIGIN ? [process.env.ELECTRON_RENDERER_ORIGIN] : []),
   ...(process.env.NODE_ENV !== 'production'
     ? [
         "http://localhost:5173",
